@@ -13,7 +13,7 @@ interface AppShellProps {
 }
 
 export default function AppShell({ navbar, children }: AppShellProps) {
-  const [closed, setClosed] = useState(false);
+  const [closed, setClosed] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const handleOpen = () => {
