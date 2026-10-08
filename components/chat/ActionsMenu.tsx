@@ -11,6 +11,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { focusRenameInput } from "@/components/chat/InlineRenameInput";
 import { useLatest } from "@/lib/use-latest";
 
 export interface MenuAction {
@@ -88,7 +89,9 @@ export default function ActionsMenu({
         align="end"
         className="w-52"
         onCloseAutoFocus={(event) => {
-          if (keepFocusRef.current) event.preventDefault();
+          if (!keepFocusRef.current) return;
+          event.preventDefault();
+          focusRenameInput();
         }}
       >
         <MenuItems actions={actions} />

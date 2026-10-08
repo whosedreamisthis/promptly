@@ -13,11 +13,10 @@ import {
   renameNotebook as renameNotebookAction,
   setNotebookPinned as setNotebookPinnedAction,
 } from "@/actions/notebooks";
+import { NEW_NOTEBOOK_TITLE } from "@/lib/notebooks";
 import { persist } from "@/lib/persist";
 import { useLatest } from "@/lib/use-latest";
 import type { Chat, Notebook } from "@/types/chats";
-
-const NEW_NOTEBOOK_TITLE = "Untitled notebook";
 
 /** Notebook state with optimistic updates; deleting a notebook also detaches its chats. */
 export function useNotebooks(

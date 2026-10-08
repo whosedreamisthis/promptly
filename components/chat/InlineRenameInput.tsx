@@ -11,6 +11,14 @@ interface InlineRenameInputProps {
   onCancel: () => void;
 }
 
+/**
+ * Focuses the open rename field. It cannot focus itself on mount: the menu that opened it is still
+ * closing and traps focus, which blurs the field and cancels the rename. The menu calls this once closed.
+ */
+export function focusRenameInput() {
+  document.querySelector<HTMLInputElement>("input[data-rename-input]")?.focus();
+}
+
 /** Text field that commits on Enter or blur and cancels on Escape or an unchanged value. */
 export default function InlineRenameInput({
   value,
@@ -31,7 +39,7 @@ export default function InlineRenameInput({
 
   return (
     <Input
-      autoFocus
+      data-rename-input=""
       defaultValue={value}
       aria-label={ariaLabel}
       onFocus={(event) => {
