@@ -1,8 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import { ClerkProvider } from "@clerk/nextjs";
-import ChatsProvider from "@/components/chat/ChatsProvider";
+import ChatsLoader from "@/components/chat/ChatsLoader";
 import NavBar from "@/components/layout/NavBar";
+import { Toaster } from "@/components/ui/sonner";
 import AppShell from "@/components/sidebar/AppShell";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
@@ -46,21 +47,24 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           signUpUrl="/register"
           localization={CLERK_LOCALIZATION}
         >
-          <ChatsProvider>
-            <AppShell
-              navbar={
-                <Suspense
-                  fallback={
-                    <div className="h-16 border-b border-white/60 bg-white/40" />
-                  }
-                >
-                  <NavBar />
-                </Suspense>
-              }
-            >
-              {children}
-            </AppShell>
-          </ChatsProvider>
+          <Suspense fallback={null}>
+            <ChatsLoader>
+              <AppShell
+                navbar={
+                  <Suspense
+                    fallback={
+                      <div className="h-16 border-b border-white/60 bg-white/40" />
+                    }
+                  >
+                    <NavBar />
+                  </Suspense>
+                }
+              >
+                {children}
+              </AppShell>
+            </ChatsLoader>
+          </Suspense>
+          <Toaster />
         </ClerkProvider>
       </body>
     </html>

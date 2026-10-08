@@ -28,12 +28,12 @@ export default function ChatView({ chatId }: ChatViewProps) {
   const messages = chatId ? (messagesByChat[chatId] ?? []) : [];
   const streaming = chatId ? streamingChatIds.includes(chatId) : false;
 
-  const handleSubmit = (submission: ChatSubmission) => {
-    const id = sendMessage(
+  const handleSubmit = async (submission: ChatSubmission) => {
+    const id = await sendMessage(
       chatId ?? draftChatIdRef.current ?? crypto.randomUUID(),
       submission,
     );
-    if (!chatId) router.push(`/chats/${id}`);
+    if (id && !chatId) router.push(`/chats/${id}`);
   };
 
   const greeting = user?.firstName

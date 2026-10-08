@@ -18,8 +18,19 @@ export default function RoutedSidebar({
 }: RoutedSidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { chats, createChat, renameChat, togglePinChat, deleteChat } =
-    useChats();
+  const {
+    chats,
+    notebooks,
+    createChat,
+    renameChat,
+    togglePinChat,
+    deleteChat,
+    moveChatToNotebook,
+    createNotebook,
+    renameNotebook,
+    togglePinNotebook,
+    deleteNotebook,
+  } = useChats();
   const activeChatId = pathname.startsWith("/chats/")
     ? pathname.split("/")[2]
     : null;
@@ -33,18 +44,29 @@ export default function RoutedSidebar({
     if (id === activeChatId) router.push("/");
   };
 
+  const handleNewChat = async () => {
+    const id = await createChat();
+    if (id) router.push(`/chats/${id}`);
+  };
+
   return (
     <Sidebar
       chats={chats}
+      notebooks={notebooks}
       activeChatId={activeChatId}
       closed={closed}
       mobileOpen={mobileOpen}
       onClose={onClose}
-      onNewChat={() => router.push(`/chats/${createChat()}`)}
+      onNewChat={handleNewChat}
       onSelectChat={handleSelectChat}
       onRenameChat={renameChat}
       onTogglePinChat={togglePinChat}
       onDeleteChat={handleDeleteChat}
+      onMoveChat={moveChatToNotebook}
+      onNewNotebook={createNotebook}
+      onRenameNotebook={renameNotebook}
+      onTogglePinNotebook={togglePinNotebook}
+      onDeleteNotebook={deleteNotebook}
     />
   );
 }
