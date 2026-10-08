@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   chatRequestSchema,
+  capGuestHistory,
   MAX_GUEST_HISTORY,
+  MAX_GUEST_MESSAGE_LENGTH,
   MAX_MESSAGE_LENGTH,
 } from "@/lib/validations/messages";
 
@@ -65,5 +67,26 @@ describe("chatRequestSchema", () => {
         history: [{ role: "USER", content: "" }],
       }).success,
     ).toBe(false);
+  });
+});
+
+describe("capGuestHistory", () => {
+  it("keeps the last turns and cuts long content to the guest length", () => {
+    const history = Array.from({ length: MAX_GUEST_HISTORY + 2 }, (_, index) => ({
+      role: "USER" as const,
+      content: `${index}`.padEnd(MAX_GUEST_MESSAGE_LENGTH + 500, "x"),
+    }));
+
+    const capped = capGuestHistory(history);
+
+    expect(capped).toHaveLength(MAX_GUEST_HISTORY);
+    expect(capped[0].content.startsWith("2")).toBe(true);
+    expect(capped.every((m) => m.content.length === MAX_GUEST_MESSAGE_LENGTH)).toBe(true);
+    expect(capped[0].role).toBe("USER");
+  });
+
+  it("leaves short history unchanged", () => {
+    const history = [{ role: "USER" as const, content: "hi" }];
+    expect(capGuestHistory(history)).toEqual(history);
   });
 });

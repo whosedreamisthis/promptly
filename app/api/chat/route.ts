@@ -19,10 +19,11 @@ import {
   type ReplySource,
 } from "@/lib/chat-limits";
 import { getClientIp } from "@/lib/demo-limits";
+import { hasErrorCode, UNIQUE_VIOLATION_CODE } from "@/lib/db-errors";
 import { ensureUser } from "@/lib/session";
 import {
   chatRequestSchema,
-  MAX_GUEST_HISTORY,
+  capGuestHistory,
   MAX_GUEST_MESSAGE_LENGTH,
   MAX_MESSAGE_LENGTH,
 } from "@/lib/validations/messages";
@@ -34,6 +35,14 @@ const MODEL_MAX_RETRIES = 1;
 const GENERIC_ERROR ="Something went wrong. Please try again.";
 /** Generous cap for a message plus the history a signed-out user sends, with ids and JSON overhead. */
 const MAX_BODY_BYTES = 150_000;
+
+function parseJson(raw: string): unknown {
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
 
 function errorResponse(error: string, status: number) {
   return Response.json({ error }, { status });
@@ -74,7 +83,7 @@ async function guestReply(
     model: getModel(),
     instructions: SYSTEM_PROMPT,
     messages: toModelMessages([
-      ...history.slice(-MAX_GUEST_HISTORY),
+      ...capGuestHistory(history),
       { role: "USER", content: text },
     ]),
     maxOutputTokens: MAX_OUTPUT_TOKENS,
@@ -97,9 +106,12 @@ export async function POST(request: Request) {
   if (contentLength > MAX_BODY_BYTES) {
     return errorResponse("Message too large", 413);
   }
-  const parsed = chatRequestSchema.safeParse(
-    await request.json().catch(() => null),
-  );
+  // content-length is absent on chunked requests, so the body itself is measured too.
+  const raw = await request.text().catch(() => "");
+  if (raw.length > MAX_BODY_BYTES) {
+    return errorResponse("Message too large", 413);
+  }
+  const parsed = chatRequestSchema.safeParse(parseJson(raw));
   if (!parsed.success) return errorResponse("Invalid input", 400);
   const { chatId, messageId, text, history: guestHistory } = parsed.data;
 
@@ -115,7 +127,7 @@ export async function POST(request: Request) {
     if (!chat) return errorResponse("Chat not found", 404);
 
     const duplicate = await db.message.findUnique({
-      where: { id: messageId },
+      where: { id: messageId, chatId },
       select: { id: true },
     });
     if (duplicate) return errorResponse("Message already sent", 409);
@@ -167,7 +179,8 @@ export async function POST(request: Request) {
           }),
         ]);
       } catch (error) {
-        console.error(error);
+        // A concurrent request with the same messageId already saved this turn.
+        if (!hasErrorCode(error, UNIQUE_VIOLATION_CODE)) console.error(error);
       }
     };
 
