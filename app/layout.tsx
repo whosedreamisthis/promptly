@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import { ClerkProvider } from "@clerk/nextjs";
 import NavBar from "@/components/layout/NavBar";
@@ -24,6 +24,10 @@ const CLERK_LOCALIZATION = {
   },
 };
 
+export const viewport: Viewport = {
+  viewportFit: "cover",
+};
+
 export const metadata: Metadata = {
   title: "Promptly",
   description: "Promptly AI chat",
@@ -43,7 +47,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         >
           <AppShell
             navbar={
-              <Suspense fallback={<div className="h-16 border-b border-white/60 bg-white/40" />}>
+              <Suspense
+                fallback={
+                  <div className="h-16 border-b border-white/60 bg-white/40" />
+                }
+              >
                 <NavBar />
               </Suspense>
             }

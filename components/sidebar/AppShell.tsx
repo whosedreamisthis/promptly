@@ -19,6 +19,7 @@ export default function AppShell({ navbar, children }: AppShellProps) {
   );
   const [closed, setClosed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [chatViewKey, setChatViewKey] = useState(0);
 
   const handleOpen = () => {
     setClosed(false);
@@ -34,6 +35,8 @@ export default function AppShell({ navbar, children }: AppShellProps) {
     const chat: Chat = { id: crypto.randomUUID(), title: "New chat" };
     setChats((prev) => [chat, ...prev]);
     setActiveChatId(chat.id);
+    // Remounting the page content resets the chat view to its empty state.
+    setChatViewKey((prev) => prev + 1);
   };
 
   const handleRenameChat = (id: string, title: string) => {
@@ -104,7 +107,12 @@ export default function AppShell({ navbar, children }: AppShellProps) {
             />
           </div>
         </Show>
-        <main className="min-h-0 flex-1 overflow-y-auto">{children}</main>
+        <main
+          key={chatViewKey}
+          className="flex min-h-0 flex-1 flex-col overflow-y-auto"
+        >
+          {children}
+        </main>
       </div>
     </div>
   );
