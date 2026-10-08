@@ -32,7 +32,7 @@ export default function SidebarFooter() {
           </div>
         </Show>
         <Show when="signed-out">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-pastel-lavender">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
             <User className="h-5 w-5" />
           </span>
           <p className="min-w-0 flex-1 truncate text-sm font-medium">Guest</p>

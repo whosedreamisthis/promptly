@@ -70,7 +70,7 @@ export default function NotebookView({ notebookId }: NotebookViewProps) {
                 {notebookChats.map((chat) => (
                   <li
                     key={chat.id}
-                    className="flex items-center rounded-md hover:bg-pastel-peach"
+                    className="flex items-center rounded-md hover:bg-highlight hover:text-highlight-foreground"
                   >
                     {renamingId === chat.id ? (
                       <InlineRenameInput
