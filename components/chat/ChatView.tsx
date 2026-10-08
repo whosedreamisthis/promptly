@@ -110,7 +110,7 @@ export default function ChatView({
       </div>
       <div className="shrink-0 px-14 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2">
         {isGuest && (
-          <div className="mx-auto mb-2 flex w-full max-w-3xl items-center justify-between gap-3 rounded-md bg-white/70 px-3 py-2 text-sm text-muted-foreground">
+          <div className="mx-auto mb-2 flex w-full max-w-3xl items-center justify-between gap-3 rounded-md bg-card px-3 py-2 text-sm text-muted-foreground">
             <p>
               {userMessageCount >= GUEST_SIGN_IN_PROMPT_AFTER
                 ? "Sign in to keep chatting and save your chats."
