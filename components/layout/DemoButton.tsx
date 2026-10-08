@@ -12,11 +12,13 @@ const GENERIC_ERROR = "The demo could not start. Please try again.";
 interface DemoButtonProps {
   className?: string;
   variant?: "default" | "outline" | "ghost" | "secondary";
+  label?: string;
 }
 
 export default function DemoButton({
   className,
   variant = "outline",
+  label = "Try the demo",
 }: DemoButtonProps) {
   const { signIn } = useSignIn();
   const [starting, setStarting] = useState(false);
@@ -59,7 +61,7 @@ export default function DemoButton({
       onClick={startDemo}
     >
       {starting && <Loader2Icon className="animate-spin" aria-hidden="true" />}
-      {starting ? "Starting demo…" : "Try the demo"}
+      {starting ? "Starting demo…" : label}
     </Button>
   );
 }

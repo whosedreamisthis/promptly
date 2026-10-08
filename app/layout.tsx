@@ -43,7 +43,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <body className="h-screen overflow-hidden">
+      <body className="h-dvh overflow-hidden">
         <ThemeProvider
           attribute="class"
           defaultTheme="light"
