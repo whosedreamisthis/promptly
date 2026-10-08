@@ -5,6 +5,7 @@ import { Show, UserButton } from "@clerk/nextjs";
 import { Menu } from "lucide-react";
 import { USER_MENU_POPOVER_CLASS } from "@/lib/clerk-appearance";
 import { Button } from "@/components/ui/button";
+import DemoBanner from "@/components/layout/DemoBanner";
 import RoutedSidebar from "@/components/sidebar/RoutedSidebar";
 
 interface AppShellProps {
@@ -46,21 +47,24 @@ export default function AppShell({ navbar, children }: AppShellProps) {
         className="relative flex min-w-0 flex-1 flex-col"
         onClick={handleMainAreaClick}
       >
-        {navbar}
-        <div
-          className={`absolute left-3 top-3.5 z-10 items-center gap-2 ${
-            closed ? "flex" : "flex md:hidden"
-          }`}
-        >
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label="Open sidebar"
-            onClick={handleOpen}
+        <DemoBanner />
+        <div className="relative">
+          {navbar}
+          <div
+            className={`absolute left-3 top-3.5 z-10 items-center gap-2 ${
+              closed ? "flex" : "flex md:hidden"
+            }`}
           >
-            <Menu className="size-5" />
-          </Button>
-          <span className="text-lg font-semibold">Promptly</span>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Open sidebar"
+              onClick={handleOpen}
+            >
+              <Menu className="size-5" />
+            </Button>
+            <span className="text-lg font-semibold">Promptly</span>
+          </div>
         </div>
         <Show when="signed-in">
           <div

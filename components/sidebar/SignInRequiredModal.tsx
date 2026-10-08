@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import DemoButton from "@/components/layout/DemoButton";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -35,6 +36,7 @@ export default function SignInRequiredModal({
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
+          <DemoButton className="rounded-md" />
           <Button asChild className="rounded-md">
             <Link
               href="/sign-in"

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Show } from "@clerk/nextjs";
+import DemoButton from "@/components/layout/DemoButton";
 import { Button } from "@/components/ui/button";
 
 export default function NavBar() {
@@ -8,6 +9,7 @@ export default function NavBar() {
       <Show when="signed-out">
         <header className="flex h-16 shrink-0 items-center justify-end border-b border-white/60 bg-white/40 px-6 backdrop-blur-md">
           <nav className="flex items-center gap-3">
+            <DemoButton className="h-9 rounded-md px-4" />
             <Button
               asChild
               variant="ghost"
