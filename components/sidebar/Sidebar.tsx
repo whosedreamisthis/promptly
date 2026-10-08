@@ -36,11 +36,13 @@ interface SidebarProps {
   chats: Chat[];
   notebooks: Notebook[];
   activeChatId: string | null;
+  activeNotebookId: string | null;
   closed: boolean;
   mobileOpen: boolean;
   onClose: () => void;
   onNewChat: () => void;
-  onSelectChat: (id: string | null) => void;
+  onSelectChat: (id: string) => void;
+  onSelectNotebook: (id: string) => void;
   onRenameChat: (id: string, title: string) => void;
   onTogglePinChat: (id: string) => void;
   onDeleteChat: (id: string) => void;
@@ -60,11 +62,13 @@ export default function Sidebar({
   chats,
   notebooks,
   activeChatId,
+  activeNotebookId,
   closed,
   mobileOpen,
   onClose,
   onNewChat,
   onSelectChat,
+  onSelectNotebook,
   onRenameChat,
   onTogglePinChat,
   onDeleteChat,
@@ -77,8 +81,6 @@ export default function Sidebar({
   const [query, setQuery] = useState("");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [activeNotebookId, setActiveNotebookId] = useState<string | null>(null);
-
   const [renamingId, setRenamingId] = useState<string | null>(null);
 
   const filtered = pinnedFirst(
@@ -88,24 +90,17 @@ export default function Sidebar({
   );
 
   const handleSelectChat = (id: string) => {
-    setActiveNotebookId(null);
     onSelectChat(id);
     onClose();
   };
 
   const handleSelectNotebook = (id: string) => {
-    onSelectChat(null);
-    setActiveNotebookId(id);
+    onSelectNotebook(id);
     onClose();
   };
 
   const handleNewNotebook = () => {
     handleSelectNotebook(onNewNotebook());
-  };
-
-  const handleDeleteNotebook = (id: string) => {
-    onDeleteNotebook(id);
-    setActiveNotebookId((prev) => (prev === id ? null : prev));
   };
 
   const chatActions = (chat: Chat): MenuAction[] => [
@@ -168,7 +163,7 @@ export default function Sidebar({
       label: "Delete",
       icon: <Trash2 className="h-4 w-4" />,
       danger: true,
-      onSelect: () => handleDeleteNotebook(notebook.id),
+      onSelect: () => onDeleteNotebook(notebook.id),
     },
   ];
 
@@ -222,7 +217,6 @@ export default function Sidebar({
             variant="ghost"
             className="h-9 justify-start gap-3 px-2 font-normal"
             onClick={() => {
-              setActiveNotebookId(null);
               onNewChat();
               onClose();
             }}

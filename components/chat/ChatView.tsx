@@ -1,12 +1,21 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import ChatInput, { type ChatSubmission } from "@/components/chat/ChatInput";
 import ChatThread from "@/components/chat/ChatThread";
 import { useChats } from "@/components/chat/ChatsProvider";
 import Logo from "@/components/layout/Logo";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 
 interface ChatViewProps {
   /** Omitted on the home page, which uses a pre-generated id until the first message. */
@@ -23,7 +32,10 @@ export default function ChatView({ chatId }: ChatViewProps) {
   }, []);
 
   const router = useRouter();
-  const { messagesByChat, streamingChatIds, sendMessage } = useChats();
+  const { chats, notebooks, messagesByChat, streamingChatIds, sendMessage } =
+    useChats();
+  const chat = chats.find((item) => item.id === chatId);
+  const notebook = notebooks.find((item) => item.id === chat?.notebookId);
 
   const messages = chatId ? (messagesByChat[chatId] ?? []) : [];
   const streaming = chatId ? streamingChatIds.includes(chatId) : false;
@@ -42,6 +54,28 @@ export default function ChatView({ chatId }: ChatViewProps) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
+      {chat && notebook && (
+        <Breadcrumb className="shrink-0 px-14 py-2">
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link
+                  href={`/notebooks/${notebook.id}`}
+                  className="block max-w-48 truncate"
+                >
+                  {notebook.title}
+                </Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage className="block max-w-64 truncate">
+                {chat.title}
+              </BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+      )}
       <div className="min-h-0 flex-1 overflow-y-auto">
         {messages.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center gap-4 px-4 text-center">

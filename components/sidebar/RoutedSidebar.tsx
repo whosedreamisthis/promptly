@@ -35,8 +35,17 @@ export default function RoutedSidebar({
     ? pathname.split("/")[2]
     : null;
 
-  const handleSelectChat = (id: string | null) => {
-    if (id) router.push(`/chats/${id}`);
+  const activeNotebookId = pathname.startsWith("/notebooks/")
+    ? pathname.split("/")[2]
+    : null;
+
+  const handleSelectChat = (id: string) => router.push(`/chats/${id}`);
+
+  const handleSelectNotebook = (id: string) => router.push(`/notebooks/${id}`);
+
+  const handleDeleteNotebook = (id: string) => {
+    deleteNotebook(id);
+    if (id === activeNotebookId) router.push("/");
   };
 
   const handleDeleteChat = (id: string) => {
@@ -54,11 +63,13 @@ export default function RoutedSidebar({
       chats={chats}
       notebooks={notebooks}
       activeChatId={activeChatId}
+      activeNotebookId={activeNotebookId}
       closed={closed}
       mobileOpen={mobileOpen}
       onClose={onClose}
       onNewChat={handleNewChat}
       onSelectChat={handleSelectChat}
+      onSelectNotebook={handleSelectNotebook}
       onRenameChat={renameChat}
       onTogglePinChat={togglePinChat}
       onDeleteChat={handleDeleteChat}
@@ -66,7 +77,7 @@ export default function RoutedSidebar({
       onNewNotebook={createNotebook}
       onRenameNotebook={renameNotebook}
       onTogglePinNotebook={togglePinNotebook}
-      onDeleteNotebook={deleteNotebook}
+      onDeleteNotebook={handleDeleteNotebook}
     />
   );
 }
