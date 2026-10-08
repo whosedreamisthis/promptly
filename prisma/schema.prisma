@@ -13,9 +13,10 @@ enum MessageRole {
 }
 
 model User {
-  id        String   @id // Clerk user id
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id // Clerk user id
+  geminiModel String? // null means the default model
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   notebooks Notebook[]
   chats     Chat[]

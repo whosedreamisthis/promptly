@@ -179,8 +179,12 @@ export async function POST(request: Request) {
       });
     }
 
+    const preferences = await db.user.findUnique({
+      where: { id: userId },
+      select: { geminiModel: true },
+    });
     const result = streamText({
-      model: getModel(),
+      model: getModel(preferences?.geminiModel),
       instructions: SYSTEM_PROMPT,
       messages: toModelMessages(history),
       maxOutputTokens: MAX_OUTPUT_TOKENS,

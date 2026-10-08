@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import { ClerkProvider } from "@clerk/nextjs";
+import { ThemeProvider } from "next-themes";
 import ChatsLoader from "@/components/chat/ChatsLoader";
 import NavBar from "@/components/layout/NavBar";
 import { Toaster } from "@/components/ui/sonner";
@@ -40,8 +41,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
       <body className="h-screen overflow-hidden">
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="light"
+          enableSystem={false}
+        >
         <ClerkProvider
           signInUrl="/sign-in"
           signUpUrl="/register"
@@ -66,6 +73,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           </Suspense>
           <Toaster />
         </ClerkProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

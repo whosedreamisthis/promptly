@@ -1,20 +1,34 @@
-# Current Feature
+# Current Feature: Settings Modal
 
 <!-- Feature name and short description -->
+
+Turns the placeholder settings modal, opened from the Settings button in the sidebar footer, into a working one where the user can toggle the theme and choose the Gemini model (free tier models only).
 
 ## Status
 
 <!-- Not Started | In Progress | Completed -->
 
-Completed
+In Progress
 
 ## Goals
 
-<!-- Goals and requirements -->
+- Fill the existing `SettingsModal` (opened by the sidebar footer Settings button) with the theme and model settings; no separate `/settings` page
+- Theme toggle: dark (default) / light, applied app-wide and remembered across visits via a cookie
+- Gemini model selector offering only free tier models, with the current model preselected
+- Chat requests use the selected model (`/api/chat` validates the value against the free tier allowlist)
+- Persist the choice per user (signed-in) and fall back to the default model for guests
+- Validate the model input with Zod and return `{ success, data, error }` from the Server Action, with toast on errors
+- Use shadcn/ui components (e.g. Select / RadioGroup / Switch, Card) styled via theme variables
 
 ## Notes
 
-<!-- Any extra notes -->
+- Current model is hardcoded in `lib/ai.ts` (`GEMINI_MODEL`); the allowlist of free tier models should live in a shared constant there or in `lib/`
+- Confirm the current free tier Gemini model list before hardcoding it (check the Gemini API pricing docs / Context7)
+- Storage decision: model is stored in a `User` column via `prisma migrate dev` (development branch only) and read server-side in `/api/chat`; theme is stored in a cookie read in the root layout so there is no flash on first paint and it works for guests
+- Existing `components/sidebar/SettingsModal.tsx` is a placeholder dialog that this feature fills in
+- Theme uses the already-installed `next-themes` (stored in localStorage, no flash) instead of a cookie, since it needs no extra code; the model is still stored in a `User` column
+- `context/features/settings-spec.md` is an unfinished stub ("create a settiin") and can be ignored or deleted
+- Theme: colors in `context/colors.md`, dark mode first with light as option
 
 ## Completed Features
 

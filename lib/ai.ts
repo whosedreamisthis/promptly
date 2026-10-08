@@ -1,6 +1,6 @@
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { resolveModel } from "@/lib/models";
 
-export const GEMINI_MODEL = "gemini-3.5-flash-lite";
 export const MAX_OUTPUT_TOKENS = 2000;
 export const HISTORY_LIMIT = 30;
 const TITLE_MAX_LENGTH = 60;
@@ -115,11 +115,11 @@ export interface HistoryMessage {
   content: string;
 }
 
-export function getModel() {
+export function getModel(modelId: string | null = null) {
   const google = createGoogleGenerativeAI({
     apiKey: process.env.GEMINI_API_KEY,
   });
-  return google(GEMINI_MODEL);
+  return google(resolveModel(modelId));
 }
 
 /** Maps stored messages to model messages; callers limit the history to HISTORY_LIMIT. */
