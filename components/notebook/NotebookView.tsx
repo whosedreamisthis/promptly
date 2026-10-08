@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { BookOpen } from "lucide-react";
 import ActionsMenu from "@/components/chat/ActionsMenu";
 import ChatInput from "@/components/chat/ChatInput";
+import ConfirmDeleteDialog from "@/components/chat/ConfirmDeleteDialog";
 import { useChats } from "@/components/chat/ChatsProvider";
 import InlineRenameInput from "@/components/chat/InlineRenameInput";
 import NotebookNameForm from "@/components/notebook/NotebookNameForm";
@@ -29,6 +30,11 @@ export default function NotebookView({ notebookId }: NotebookViewProps) {
     deleteChat,
   } = useChats();
   const [renamingId, setRenamingId] = useState<string | null>(null);
+  // Kept after closing so the dialog does not lose its text while it fades out.
+  const [deleting, setDeleting] = useState<{ id: string; title: string } | null>(
+    null,
+  );
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const notebook = notebooks.find((item) => item.id === notebookId);
 
   if (!notebook) {
@@ -120,7 +126,10 @@ export default function NotebookView({ notebookId }: NotebookViewProps) {
                         },
                         {
                           label: "Delete",
-                          onSelect: () => deleteChat(chat.id),
+                          onSelect: () => {
+                            setDeleting({ id: chat.id, title: chat.title });
+                            setDeleteDialogOpen(true);
+                          },
                         },
                       ]}
                     />
@@ -134,6 +143,16 @@ export default function NotebookView({ notebookId }: NotebookViewProps) {
       <div className="shrink-0 px-14 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2">
         <ChatInput disabled={false} onSubmit={handleSubmit} />
       </div>
+      <ConfirmDeleteDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        kind="chat"
+        title={deleting?.title ?? ""}
+        onConfirm={() => {
+          if (deleting) deleteChat(deleting.id);
+          setDeleteDialogOpen(false);
+        }}
+      />
     </div>
   );
 }

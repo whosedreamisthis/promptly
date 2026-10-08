@@ -13,11 +13,18 @@ import {
 import { toast } from "sonner";
 import type { MenuAction } from "@/components/chat/ActionsMenu";
 import { useChats } from "@/components/chat/ChatsProvider";
+import type { DeletableKind } from "@/components/chat/ConfirmDeleteDialog";
 import type { Chat, Notebook } from "@/types/chats";
 
 interface SidebarMenusOptions {
   onDeleteChat: (id: string) => void;
   onDeleteNotebook: (id: string) => void;
+}
+
+interface PendingDelete {
+  kind: DeletableKind;
+  id: string;
+  title: string;
 }
 
 function PinIcon({ pinned }: { pinned: boolean }) {
@@ -43,6 +50,21 @@ export function useSidebarMenus({
   const { notebooks, moveChatToNotebook, togglePinChat, togglePinNotebook } =
     useChats();
   const [renamingId, setRenamingId] = useState<string | null>(null);
+  // Kept after closing so the dialog does not lose its text while it fades out.
+  const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
+  const requestDelete = (item: PendingDelete) => {
+    setPendingDelete(item);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (!pendingDelete) return;
+    if (pendingDelete.kind === "chat") onDeleteChat(pendingDelete.id);
+    else onDeleteNotebook(pendingDelete.id);
+    setDeleteDialogOpen(false);
+  };
 
   const chatActions = (chat: Chat): MenuAction[] => [
     {
@@ -73,7 +95,8 @@ export function useSidebarMenus({
       label: "Delete",
       icon: <Trash2 className="h-4 w-4" />,
       danger: true,
-      onSelect: () => onDeleteChat(chat.id),
+      onSelect: () =>
+        requestDelete({ kind: "chat", id: chat.id, title: chat.title }),
     },
   ];
 
@@ -92,9 +115,23 @@ export function useSidebarMenus({
       label: "Delete",
       icon: <Trash2 className="h-4 w-4" />,
       danger: true,
-      onSelect: () => onDeleteNotebook(notebook.id),
+      onSelect: () =>
+        requestDelete({
+          kind: "notebook",
+          id: notebook.id,
+          title: notebook.title,
+        }),
     },
   ];
 
-  return { renamingId, setRenamingId, chatActions, notebookActions };
+  return {
+    renamingId,
+    setRenamingId,
+    chatActions,
+    notebookActions,
+    pendingDelete,
+    deleteDialogOpen,
+    setDeleteDialogOpen,
+    confirmDelete,
+  };
 }

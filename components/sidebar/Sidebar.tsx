@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { BookOpen, MessageSquare, Plus, Search, SquarePen } from "lucide-react";
 import { useChats } from "@/components/chat/ChatsProvider";
+import ConfirmDeleteDialog from "@/components/chat/ConfirmDeleteDialog";
 import { Button } from "@/components/ui/button";
 import {
   InputGroup,
@@ -56,8 +57,16 @@ export default function Sidebar({
     togglePinChat,
     togglePinNotebook,
   } = useChats();
-  const { renamingId, setRenamingId, chatActions, notebookActions } =
-    useSidebarMenus({ onDeleteChat, onDeleteNotebook });
+  const {
+    renamingId,
+    setRenamingId,
+    chatActions,
+    notebookActions,
+    pendingDelete,
+    deleteDialogOpen,
+    setDeleteDialogOpen,
+    confirmDelete,
+  } = useSidebarMenus({ onDeleteChat, onDeleteNotebook });
   const [query, setQuery] = useState("");
   const [scrolled, setScrolled] = useState(false);
   const [signInPromptOpen, setSignInPromptOpen] = useState(false);
@@ -198,6 +207,13 @@ export default function Sidebar({
           onOpenChange={setSignInPromptOpen}
           feature="Notebooks"
           onSignIn={onClose}
+        />
+        <ConfirmDeleteDialog
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          kind={pendingDelete?.kind ?? "chat"}
+          title={pendingDelete?.title ?? ""}
+          onConfirm={confirmDelete}
         />
       </aside>
     </>
