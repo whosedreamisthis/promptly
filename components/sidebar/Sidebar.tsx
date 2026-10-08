@@ -172,7 +172,7 @@ export default function Sidebar({
           </SidebarSection>
           <SidebarSection title="Recents">
             {filtered.length === 0 ? (
-              <p className="px-3 py-2 text-sm text-stone-500">
+              <p className="px-3 py-2 text-sm text-muted-foreground">
                 No recent chats
               </p>
             ) : (
