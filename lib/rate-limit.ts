@@ -70,11 +70,13 @@ function getUpstashLimiter({ limit, window }: LimitSpec): Ratelimit | null {
 /**
  * Records a call and returns true when `key` is over `spec`. Uses Upstash Redis so the
  * count is shared by every server instance; falls back to the in-memory limiter when
- * Upstash is not configured or unreachable.
+ * Upstash is not configured or unreachable. With `failClosed`, an unreachable Upstash
+ * counts as limited instead, because the per-instance fallback would not hold.
  */
 export async function checkLimit(
   key: string,
   spec: LimitSpec,
+  { failClosed = false }: { failClosed?: boolean } = {},
 ): Promise<boolean> {
   const limiter = getUpstashLimiter(spec);
   if (limiter) {
@@ -83,6 +85,7 @@ export async function checkLimit(
       return !success;
     } catch (error) {
       console.error(error);
+      if (failClosed) return true;
     }
   }
   return isRateLimited(`${spec.window}:${key}`, spec.limit, WINDOW_MS[spec.window]);

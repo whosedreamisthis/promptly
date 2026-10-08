@@ -60,11 +60,25 @@ describe("isDemoCapacityFull", () => {
 });
 
 describe("getClientIp", () => {
-  it("uses the first forwarded address", () => {
+  it("uses the platform-set address", () => {
     const request = new Request("http://localhost", {
-      headers: { "x-forwarded-for": "9.9.9.9, 10.0.0.1" },
+      headers: { "x-real-ip": "9.9.9.9" },
     });
     expect(getClientIp(request)).toBe("9.9.9.9");
+  });
+
+  it("uses the first x-vercel-forwarded-for address", () => {
+    const request = new Request("http://localhost", {
+      headers: { "x-vercel-forwarded-for": "8.8.8.8, 10.0.0.1" },
+    });
+    expect(getClientIp(request)).toBe("8.8.8.8");
+  });
+
+  it("ignores the client-controlled x-forwarded-for", () => {
+    const request = new Request("http://localhost", {
+      headers: { "x-forwarded-for": "6.6.6.6" },
+    });
+    expect(getClientIp(request)).toBe("unknown");
   });
 
   it("falls back to unknown without the header", () => {

@@ -15,26 +15,40 @@ function positiveIntFromEnv(name: string, fallback: number): number {
   return Number.isInteger(configured) && configured > 0 ? configured : fallback;
 }
 
-/** First address in `x-forwarded-for`, or "unknown" when the header is missing. */
+/**
+ * The caller's address from a header the hosting platform sets (clients can't forge it),
+ * or "unknown" when there is none. `x-forwarded-for` is deliberately not used: its first
+ * entry is whatever the client sent.
+ */
 export function getClientIp(request: Request): string {
-  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-  return ip || "unknown";
+  const ip =
+    request.headers.get("x-real-ip") ??
+    request.headers.get("x-vercel-forwarded-for")?.split(",")[0];
+  return ip?.trim() || "unknown";
 }
 
 /** True when this address already started its daily share of demos (`DEMO_LIMIT_PER_IP`). */
 export function isDemoIpLimited(ip: string): Promise<boolean> {
-  return checkLimit(`demo:ip:${ip}`, {
-    limit: positiveIntFromEnv("DEMO_LIMIT_PER_IP", DEFAULT_LIMIT_PER_IP),
-    window: "1 d",
-  });
+  return checkLimit(
+    `demo:ip:${ip}`,
+    {
+      limit: positiveIntFromEnv("DEMO_LIMIT_PER_IP", DEFAULT_LIMIT_PER_IP),
+      window: "1 d",
+    },
+    { failClosed: true },
+  );
 }
 
 /** True once everyone together started the day's demos (`DEMO_LIMIT_GLOBAL`). */
 export function isDemoGloballyLimited(): Promise<boolean> {
-  return checkLimit("demo:global", {
-    limit: positiveIntFromEnv("DEMO_LIMIT_GLOBAL", DEFAULT_LIMIT_GLOBAL),
-    window: "1 d",
-  });
+  return checkLimit(
+    "demo:global",
+    {
+      limit: positiveIntFromEnv("DEMO_LIMIT_GLOBAL", DEFAULT_LIMIT_GLOBAL),
+      window: "1 d",
+    },
+    { failClosed: true },
+  );
 }
 
 /** How long a demo user lives before cleanup may delete it (`DEMO_USER_TTL_HOURS`). */

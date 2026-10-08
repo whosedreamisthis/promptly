@@ -18,6 +18,7 @@ import {
   isBurstLimited,
   type ReplySource,
 } from "@/lib/chat-limits";
+import { getClientIp } from "@/lib/demo-limits";
 import { ensureUser } from "@/lib/session";
 import {
   chatRequestSchema,
@@ -59,8 +60,7 @@ async function guestReply(
       400,
     );
   }
-  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-  const key = ip ?? "unknown";
+  const key = getClientIp(request);
   if (await isBurstLimited("guest", key)) return tooFastResponse();
   const headers = { "X-Message-Id": crypto.randomUUID() };
   const source = await chooseReplySource("guest", key);
