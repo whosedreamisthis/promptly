@@ -17,6 +17,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import { GUEST_SIGN_IN_PROMPT_AFTER } from "@/lib/validations/messages";
 import type { ChatMessage, ChatSubmission } from "@/types/chats";
 
 const NO_MESSAGES: ChatMessage[] = [];
@@ -57,6 +58,9 @@ export default function ChatView({
     ? (messagesByChat[activeId] ?? initialMessages)
     : NO_MESSAGES;
   const streaming = activeId ? streamingChatIds.includes(activeId) : false;
+  const userMessageCount = messages.filter(
+    (message) => message.role === "user",
+  ).length;
 
   const handleSubmit = async (submission: ChatSubmission) => {
     const id = await sendMessage(
@@ -107,7 +111,11 @@ export default function ChatView({
       <div className="shrink-0 px-14 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2">
         {isGuest && (
           <div className="mx-auto mb-2 flex w-full max-w-3xl items-center justify-between gap-3 rounded-md bg-white/70 px-3 py-2 text-sm text-muted-foreground">
-            <p>Your chats won&apos;t be saved unless you sign in.</p>
+            <p>
+              {userMessageCount >= GUEST_SIGN_IN_PROMPT_AFTER
+                ? "Sign in to keep chatting and save your chats."
+                : "Your chats won't be saved unless you sign in."}
+            </p>
             <Button asChild size="sm" className="shrink-0 rounded-md">
               <Link href="/sign-in">Sign in</Link>
             </Button>

@@ -20,7 +20,10 @@ import {
 import { useChatMessages } from "@/components/chat/useChatMessages";
 import { useNotebooks } from "@/components/chat/useNotebooks";
 import { persist } from "@/lib/persist";
-import { MAX_GUEST_HISTORY } from "@/lib/validations/messages";
+import {
+  MAX_GUEST_HISTORY,
+  MAX_GUEST_MESSAGE_LENGTH,
+} from "@/lib/validations/messages";
 import { useLatest } from "@/lib/use-latest";
 import {
   NEW_CHAT_TITLE,
@@ -184,7 +187,13 @@ export default function ChatsProvider({
         return null;
       }
       if (isGuest) {
-        const history = (messagesRef.current[guestChatId] ?? [])
+        if (submission.text.length > MAX_GUEST_MESSAGE_LENGTH) {
+          toast.error(
+            `Messages are limited to ${MAX_GUEST_MESSAGE_LENGTH} characters unless you sign in`,
+          );
+          return null;
+        }
+        const history =(messagesRef.current[guestChatId] ?? [])
           .filter((message) => message.text)
           .slice(-MAX_GUEST_HISTORY)
           .map((message) => ({

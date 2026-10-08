@@ -10,7 +10,11 @@ export const addMessageSchema = z.object({
 });
 
 /** Earlier turns a signed-out user sends along, since nothing is stored for them. */
-export const MAX_GUEST_HISTORY = 29;
+export const MAX_GUEST_HISTORY = 10;
+/** Signed-out users get shorter messages than signed-in users. */
+export const MAX_GUEST_MESSAGE_LENGTH = 2000;
+/** After this many messages the notice above the chat box urges guests to sign in. */
+export const GUEST_SIGN_IN_PROMPT_AFTER = 5;
 
 export const chatRequestSchema = z.object({
   chatId: z.string().min(1).max(64),

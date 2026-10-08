@@ -1,6 +1,6 @@
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 
-export const GEMINI_MODEL = "gemini-3.8-flash";
+export const GEMINI_MODEL = "gemini-3.5-flash-lite";
 export const MAX_OUTPUT_TOKENS = 2000;
 export const HISTORY_LIMIT = 30;
 const TITLE_MAX_LENGTH = 60;
@@ -11,9 +11,7 @@ export const SYSTEM_PROMPT =
 
 const MOCK_CHUNK_DELAY_MS = 25;
 
-export const MOCK_REPLY = [
-  "This is a **mock reply**. Remove `USE_AI_MODEL=false` from `.env` (or set it to `true`) to get real answers from Gemini.",
-  "",
+const MOCK_SAMPLE = [
   "Here is a short list and a code sample so you can check the formatting:",
   "",
   "- Lists render as bullets",
@@ -29,17 +27,31 @@ export const MOCK_REPLY = [
   "Nothing was sent to the model, so no tokens were used.",
 ].join("\n");
 
+export const MOCK_REPLY = [
+  "This is a **sample reply**. Live AI answers are switched off right now.",
+  "",
+  MOCK_SAMPLE,
+].join("\n");
+
+/** Shown instead of a model reply once a usage limit has been reached. */
+export const LIMIT_REPLY = [
+  "You've reached the usage limit for live AI replies, so this is a **sample reply**. Live replies come back when the limit resets.",
+  "",
+  MOCK_SAMPLE,
+].join("\n");
+
 /** Real model calls are skipped only when USE_AI_MODEL is exactly "false". */
 export function isAiEnabled(): boolean {
   return process.env.USE_AI_MODEL !== "false";
 }
 
-/** Streams MOCK_REPLY in small chunks; calls onComplete only if it was not aborted. */
+/** Streams a canned reply in small chunks; calls onComplete only if it was not aborted. */
 export function mockReplyStream(
   signal: AbortSignal,
   onComplete: (text: string) => Promise<void>,
+  reply: string = MOCK_REPLY,
 ): ReadableStream<string> {
-  const chunks = MOCK_REPLY.match(/\S+\s*/g) ?? [];
+  const chunks = reply.match(/\S+\s*/g) ?? [];
   return new ReadableStream<string>({
     async start(controller) {
       for (const chunk of chunks) {
@@ -48,7 +60,7 @@ export function mockReplyStream(
         await new Promise((resolve) => setTimeout(resolve, MOCK_CHUNK_DELAY_MS));
       }
       controller.close();
-      if (!signal.aborted) await onComplete(MOCK_REPLY);
+      if (!signal.aborted) await onComplete(reply);
     },
   });
 }

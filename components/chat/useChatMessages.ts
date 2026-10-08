@@ -95,6 +95,8 @@ export function useChatMessages(onFirstReply: (chatId: string) => void) {
         fileNames: [],
       });
       let frame = 0;
+      // The placeholder takes the server's message id once the response starts.
+      let replyId = placeholderId;
       try {
         const response = await fetch("/api/chat", {
           method: "POST",
@@ -116,6 +118,7 @@ export function useChatMessages(onFirstReply: (chatId: string) => void) {
         const serverId = response.headers.get("X-Message-Id");
         if (serverId) updateMessage(chatId, placeholderId, { id: serverId });
         const id = serverId ?? placeholderId;
+        replyId = id;
         const reader = response.body
           .pipeThrough(new TextDecoderStream())
           .getReader();
@@ -132,11 +135,13 @@ export function useChatMessages(onFirstReply: (chatId: string) => void) {
           if (!frame) frame = requestAnimationFrame(flush);
         }
         cancelAnimationFrame(frame);
+        // The model failed (e.g. quota) without sending anything.
+        if (!reply.trim()) throw new Error(STREAM_ERROR);
         updateMessage(chatId, id, { text: reply });
         if (isFirstTurn) onFirstReplyRef.current(chatId);
       } catch (error) {
         cancelAnimationFrame(frame);
-        dropMessage(chatId, placeholderId);
+        dropMessage(chatId, replyId);
         if (!controller.signal.aborted) {
           toast.error(error instanceof Error ? error.message : STREAM_ERROR);
         }

@@ -4,16 +4,23 @@ import {
   getModel,
   HISTORY_LIMIT,
   type HistoryMessage,
-  isAiEnabled,
+  LIMIT_REPLY,
   mockReplyStream,
   MAX_OUTPUT_TOKENS,
+  MOCK_REPLY,
   SYSTEM_PROMPT,
   toModelMessages,
 } from "@/lib/ai";
-import { isRateLimited } from "@/lib/rate-limit";
+import {
+  chooseReplySource,
+  isBurstLimited,
+  type ReplySource,
+} from "@/lib/chat-limits";
 import { ensureUser } from "@/lib/session";
 import {
   chatRequestSchema,
+  MAX_GUEST_HISTORY,
+  MAX_GUEST_MESSAGE_LENGTH,
   MAX_MESSAGE_LENGTH,
 } from "@/lib/validations/messages";
 
@@ -21,33 +28,51 @@ export const maxDuration = 60;
 
 const GENERIC_ERROR = "Something went wrong. Please try again.";
 /** Generous cap for a message plus the history a signed-out user sends, with ids and JSON overhead. */
-const MAX_BODY_BYTES = 400_000;
+const MAX_BODY_BYTES = 150_000;
 
 function errorResponse(error: string, status: number) {
   return Response.json({ error }, { status });
 }
 
+function tooFastResponse() {
+  return errorResponse("Too many messages. Please slow down.", 429);
+}
+
+/** The reply streamed when the model is not used. */
+function canned(source: Exclude<ReplySource, "model">) {
+  return source === "limit" ? LIMIT_REPLY : MOCK_REPLY;
+}
+
 /** Replies to a signed-out user: nothing is read from or saved to the database. */
-function guestReply(
+async function guestReply(
   request: Request,
   text: string,
   history: HistoryMessage[],
 ) {
-  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-  if (isRateLimited(`chat:guest:${ip ?? "unknown"}`)) {
-    return errorResponse("Too many messages. Please slow down.", 429);
+  if (text.length > MAX_GUEST_MESSAGE_LENGTH) {
+    return errorResponse(
+      `Messages are limited to ${MAX_GUEST_MESSAGE_LENGTH} characters unless you sign in.`,
+      400,
+    );
   }
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+  const key = ip ?? "unknown";
+  if (await isBurstLimited("guest", key)) return tooFastResponse();
   const headers = { "X-Message-Id": crypto.randomUUID() };
-  if (!isAiEnabled()) {
+  const source = await chooseReplySource("guest", key);
+  if (source !== "model") {
     return createTextStreamResponse({
       headers,
-      stream: mockReplyStream(request.signal, async () => {}),
+      stream: mockReplyStream(request.signal, async () => {}, canned(source)),
     });
   }
   const result = streamText({
     model: getModel(),
     instructions: SYSTEM_PROMPT,
-    messages: toModelMessages([...history, { role: "USER", content: text }]),
+    messages: toModelMessages([
+      ...history.slice(-MAX_GUEST_HISTORY),
+      { role: "USER", content: text },
+    ]),
     maxOutputTokens: MAX_OUTPUT_TOKENS,
     abortSignal: request.signal,
   });
@@ -71,9 +96,7 @@ export async function POST(request: Request) {
   try {
     const userId = await ensureUser();
     if (!userId) return guestReply(request, text, guestHistory ?? []);
-    if (isRateLimited(`chat:${userId}`)) {
-      return errorResponse("Too many messages. Please slow down.", 429);
-    }
+    if (await isBurstLimited("user", userId)) return tooFastResponse();
 
     const chat = await db.chat.findFirst({
       where: { id: chatId, userId },
@@ -138,10 +161,11 @@ export async function POST(request: Request) {
       }
     };
 
-    if (!isAiEnabled()) {
+    const source = await chooseReplySource("user", userId);
+    if (source !== "model") {
       return createTextStreamResponse({
         headers: { "X-Message-Id": assistantId },
-        stream: mockReplyStream(request.signal, saveReply),
+        stream: mockReplyStream(request.signal, saveReply, canned(source)),
       });
     }
 

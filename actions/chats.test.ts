@@ -29,6 +29,7 @@ import {
   renameChat,
   setChatPinned,
 } from "@/actions/chats";
+import { titleLimit } from "@/lib/chat-limits";
 import { resetRateLimits } from "@/lib/rate-limit";
 
 describe("chat actions", () => {
@@ -225,8 +226,8 @@ describe("generateChatTitle", () => {
     expect(generateText).not.toHaveBeenCalled();
   });
 
-  it("stops calling the model once the rate limit is reached", async () => {
-    for (let call = 0; call < 20; call++) {
+  it("stops calling the model once the daily limit is reached", async () => {
+    for (let call = 0; call < titleLimit().limit; call++) {
       await generateChatTitle({ chatId: "c1" });
     }
     generateText.mockClear();

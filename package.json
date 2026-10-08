@@ -17,6 +17,8 @@
     "@clerk/nextjs": "^7.9.12",
     "@prisma/adapter-pg": "^7.10.0",
     "@prisma/client": "^7.10.0",
+    "@upstash/ratelimit": "^2.2.0",
+    "@upstash/redis": "^1.39.0",
     "ai": "^7.0.134",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

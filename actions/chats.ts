@@ -11,7 +11,8 @@ import {
 } from "@/lib/ai";
 import { db } from "@/lib/db";
 import { hasErrorCode, UNIQUE_VIOLATION_CODE } from "@/lib/db-errors";
-import { isRateLimited } from "@/lib/rate-limit";
+import { isModelBudgetSpent, titleLimit } from "@/lib/chat-limits";
+import { checkLimit } from "@/lib/rate-limit";
 import { runAction } from "@/lib/run-action";
 import {
   chatIdSchema,
@@ -143,7 +144,11 @@ export async function generateChatTitle(
   input: ChatIdInput,
 ): Promise<ActionResult<{ title: string | null }>> {
   return runAction(chatIdSchema, input, async (userId, data) => {
-    if (!isAiEnabled() || isRateLimited(`title:${userId}`)) {
+    if (
+      !isAiEnabled() ||
+      (await checkLimit(`title:${userId}`, titleLimit())) ||
+      (await isModelBudgetSpent())
+    ) {
       return ok({ title: null });
     }
     const chat = await db.chat.findFirst({
