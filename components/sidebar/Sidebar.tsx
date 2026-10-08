@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import Logo from "@/components/layout/Logo";
 import SettingsModal from "@/components/sidebar/SettingsModal";
+import { USER_MENU_POPOVER_CLASS } from "@/lib/clerk-appearance";
 import type { MenuAction } from "@/components/sidebar/ItemMenu";
 import SidebarItem from "@/components/sidebar/SidebarItem";
 import SidebarSection from "@/components/sidebar/SidebarSection";
@@ -190,9 +191,9 @@ export default function Sidebar({
         />
       )}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-64 shrink-0 flex-col overflow-hidden border-r border-surface-border bg-[#F3F0F8] transition-all duration-300 ease-in-out md:static md:z-auto md:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col overflow-hidden border-r border-surface-border bg-[#F3F0F8] transition-all duration-300 ease-in-out ${
           mobileOpen ? "translate-x-0" : "-translate-x-full max-md:invisible"
-        } ${closed ? "md:invisible md:w-0 md:border-r-0" : "md:w-64"}`}
+        } ${closed ? "md:invisible md:-translate-x-full" : "md:translate-x-0"}`}
       >
         <div className="flex h-16 shrink-0 items-center gap-2 px-3">
           <div className="flex min-w-0 flex-1 items-center gap-2 pl-1">
@@ -304,6 +305,7 @@ export default function Sidebar({
                 showName
                 appearance={{
                   elements: {
+                    userButtonPopoverCard: USER_MENU_POPOVER_CLASS,
                     userButtonBox: "!flex-row !justify-start gap-2",
                     userButtonAvatarBox: "!order-first",
                     userButtonOuterIdentifier:

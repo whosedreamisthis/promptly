@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { Show, UserButton } from "@clerk/nextjs";
 import { Menu } from "lucide-react";
+import { USER_MENU_POPOVER_CLASS } from "@/lib/clerk-appearance";
 import Sidebar from "@/components/sidebar/Sidebar";
 import { MOCK_CHATS, type Chat } from "@/lib/mock-chats";
 
@@ -84,6 +86,24 @@ export default function AppShell({ navbar, children }: AppShellProps) {
           </button>
           <span className="text-lg font-semibold">Promptly</span>
         </div>
+        <Show when="signed-in">
+          <div
+            className={`absolute bottom-3 left-3 z-10 flex h-9 items-center transition-[opacity,visibility] ease-in-out ${
+              closed
+                ? "visible opacity-100 delay-[250ms] duration-500"
+                : "invisible opacity-0 duration-150 max-md:visible max-md:opacity-100"
+            }`}
+          >
+            <UserButton
+              appearance={{
+                elements: {
+                  userButtonTrigger: "rounded-md p-1",
+                  userButtonPopoverCard: USER_MENU_POPOVER_CLASS,
+                },
+              }}
+            />
+          </div>
+        </Show>
         <main className="min-h-0 flex-1 overflow-y-auto">{children}</main>
       </div>
     </div>
