@@ -12,6 +12,7 @@ import {
   InputGroupTextarea,
 } from "@/components/ui/input-group";
 import { ACCEPT_ATTRIBUTE, isAcceptedFile } from "@/lib/chat-files";
+import { MAX_MESSAGE_LENGTH } from "@/lib/validations/messages";
 import { useSpeechRecognition } from "@/lib/use-speech-recognition";
 
 export interface ChatSubmission {
@@ -33,7 +34,10 @@ export default function ChatInput({ disabled, onSubmit }: ChatInputProps) {
   const dictationBaseRef = useRef("");
 
   const { supported, listening, toggle, cancel } = useSpeechRecognition(
-    (transcript) => setText(dictationBaseRef.current + transcript),
+    (transcript) =>
+      setText(
+        (dictationBaseRef.current + transcript).slice(0, MAX_MESSAGE_LENGTH),
+      ),
     () => {
       const current = textareaRef.current?.value ?? "";
       dictationBaseRef.current =
@@ -143,6 +147,7 @@ export default function ChatInput({ disabled, onSubmit }: ChatInputProps) {
           ref={textareaRef}
           rows={1}
           value={text}
+          maxLength={MAX_MESSAGE_LENGTH}
           disabled={disabled}
           placeholder="Ask Promptly"
           aria-label="Message"

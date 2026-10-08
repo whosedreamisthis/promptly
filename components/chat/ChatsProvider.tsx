@@ -10,6 +10,7 @@ import {
   renameChat as renameChatAction,
   togglePinChat as togglePinChatAction,
 } from "@/actions/chats";
+import { addMessage as addMessageAction } from "@/actions/messages";
 import {
   createNotebook as createNotebookAction,
   deleteNotebook as deleteNotebookAction,
@@ -36,6 +37,8 @@ interface ChatsContextValue {
   chats: Chat[];
   notebooks: Notebook[];
   messagesByChat: Record<string, ChatMessage[]>;
+  /** Stores messages loaded from the database, unless the chat already has messages in memory. */
+  seedMessages: (chatId: string, messages: ChatMessage[]) => void;
   streamingChatIds: string[];
   /** Creates an empty chat and returns its id (reuses an untouched empty one), or null if saving failed. */
   createChat: () => Promise<string | null>;
@@ -123,6 +126,22 @@ export default function ChatsProvider({
     }));
   };
 
+  const seedMessages = (chatId: string, messages: ChatMessage[]) => {
+    setMessagesByChat((prev) =>
+      chatId in prev ? prev : { ...prev, [chatId]: messages },
+    );
+  };
+
+  const saveMessage = (
+    chatId: string,
+    id: string,
+    role: "USER" | "ASSISTANT",
+    content: string,
+  ) => {
+    if (!content.trim()) return;
+    void persist(addMessageAction({ id, chatId, role, content }), () => {});
+  };
+
   const streamReply = (chatId: string) => {
     const words = MOCK_REPLY.split(" ");
     const messageId = crypto.randomUUID();
@@ -143,7 +162,10 @@ export default function ChatsProvider({
           message.id === messageId ? { ...message, text } : message,
         ),
       }));
-      if (count >= words.length) stopStreaming(chatId);
+      if (count >= words.length) {
+        stopStreaming(chatId);
+        saveMessage(chatId, messageId, "ASSISTANT", MOCK_REPLY);
+      }
     }, STREAM_INTERVAL_MS);
     timersRef.current.set(chatId, timer);
   };
@@ -201,8 +223,10 @@ export default function ChatsProvider({
       updateChat(id, { title });
       void autoTitleChat({ chatId: id, title });
     }
+    const messageId = crypto.randomUUID();
+    saveMessage(id, messageId, "USER", submission.text);
     addMessage(id, {
-      id: crypto.randomUUID(),
+      id: messageId,
       role: "user",
       text: submission.text,
       fileNames: submission.files.map((file) => file.name),
@@ -307,6 +331,7 @@ export default function ChatsProvider({
         chats,
         notebooks,
         messagesByChat,
+        seedMessages,
         streamingChatIds,
         createChat,
         sendMessage,
