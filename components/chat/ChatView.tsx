@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import ChatInput, { type ChatSubmission } from "@/components/chat/ChatInput";
-import ChatThread from "@/components/chat/ChatThread";
+import ChatThread, { type ChatMessage } from "@/components/chat/ChatThread";
 import { useChats } from "@/components/chat/ChatsProvider";
 import Logo from "@/components/layout/Logo";
 import {
@@ -20,9 +20,14 @@ import {
 interface ChatViewProps {
   /** Omitted on the home page, which uses a pre-generated id until the first message. */
   chatId?: string;
+  /** Messages saved in the database, shown until the chat has messages in memory. */
+  initialMessages?: ChatMessage[];
 }
 
-export default function ChatView({ chatId }: ChatViewProps) {
+export default function ChatView({
+  chatId,
+  initialMessages = [],
+}: ChatViewProps) {
   const { user } = useUser();
   // Generated up front so the chat is saved under this id once the user sends a message.
   const draftChatIdRef = useRef<string | null>(null);
@@ -32,12 +37,24 @@ export default function ChatView({ chatId }: ChatViewProps) {
   }, []);
 
   const router = useRouter();
-  const { chats, notebooks, messagesByChat, streamingChatIds, sendMessage } =
-    useChats();
+  const {
+    chats,
+    notebooks,
+    messagesByChat,
+    seedMessages,
+    streamingChatIds,
+    sendMessage,
+  } = useChats();
+
+  useEffect(() => {
+    if (chatId) seedMessages(chatId, initialMessages);
+    // Seed once per opened chat; later changes come from the provider.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatId]);
   const chat = chats.find((item) => item.id === chatId);
   const notebook = notebooks.find((item) => item.id === chat?.notebookId);
 
-  const messages = chatId ? (messagesByChat[chatId] ?? []) : [];
+  const messages = chatId ? (messagesByChat[chatId] ?? initialMessages) : [];
   const streaming = chatId ? streamingChatIds.includes(chatId) : false;
 
   const handleSubmit = async (submission: ChatSubmission) => {

@@ -8,7 +8,13 @@ async function ChatContent({ params }: PageProps<"/chats/[chatId]">) {
   const [{ chatId }, { userId }] = await Promise.all([params, auth()]);
   const chat = userId ? await getChatWithMessages(userId, chatId) : null;
   if (!chat) notFound();
-  return <ChatView chatId={chat.id} />;
+  const messages = chat.messages.map(({ id, role, content }) => ({
+    id,
+    role: role === "USER" ? ("user" as const) : ("assistant" as const),
+    text: content,
+    fileNames: [],
+  }));
+  return <ChatView chatId={chat.id} initialMessages={messages} />;
 }
 
 export default function ChatPage(props: PageProps<"/chats/[chatId]">) {

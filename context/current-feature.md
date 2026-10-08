@@ -1,20 +1,27 @@
 # Current Feature
 
-<!-- Feature name and short description -->
+Message Persistence: save chat messages to the database and load them back when a chat is opened.
 
 ## Status
 
 <!-- Not Started | In Progress | Completed -->
 
-Completed
+In Progress
 
 ## Goals
 
 <!-- Goals and requirements -->
 
+- Save user messages and the placeholder assistant replies to the `Message` table through a Clerk-scoped server action
+- Load a chat's saved messages when opening `/chats/[chatId]`, so chats are no longer empty after a reload
+- Limit message length to 10,000 characters, enforced by Zod on the server and by the chat input
+
 ## Notes
 
 <!-- Any extra notes -->
+
+- Attachments are out of scope: only message text is saved, so file-only messages are not persisted
+- Action in `actions/messages.ts`, schema and limit in `lib/validations/messages.ts`
 
 ## Completed Features
 
