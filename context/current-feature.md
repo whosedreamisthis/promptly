@@ -1,28 +1,20 @@
-# Current Feature: AI Integration
+# Current Feature
 
-Gemini replies and auto-generated chat titles, from `context/features/ai-integration-spec.md`.
+<!-- Feature name and short description -->
 
 ## Status
 
 <!-- Not Started | In Progress | Completed -->
 
-In Progress
+Completed
 
 ## Goals
 
 <!-- Goals and requirements -->
 
-- Stream real Gemini replies from `POST /api/chat`, saving user and assistant messages on the server
-- Generate a chat title after the first reply with the `generateChatTitle` action, never overwriting a manual rename
-- Replace the mock reply in `ChatsProvider`, with abort and toast on errors
-
 ## Notes
 
 <!-- Any extra notes -->
-
-- Text only; attachments are not sent to the model
-- Packages `ai` and `@ai-sdk/google`; key is `GEMINI_API_KEY`, also needed on Vercel
-- Remove `addMessage` and its tests, since the route saves messages
 
 ## Completed Features
 
@@ -39,3 +31,4 @@ In Progress
 - **Database Error Handling:** Retries the chats query when Neon is unreachable and shows a branded error page instead of crashing; key files `lib/chats-data.ts`, `app/global-error.tsx`.
 - **Message Persistence:** Saves user messages and replies to the database and loads them on chat pages, with a 10,000 character limit; key files `actions/messages.ts`, `lib/validations/messages.ts`, `components/chat/ChatsProvider.tsx`.
 - **Database Seed:** Adds an idempotent `npm run db:seed` that fills the development database with 5 notebooks, 20 chats and 82 messages; key files `prisma/seed.ts`, `prisma/seed-data.ts`, `context/features/seed-spec.md`.
+- **AI Integration:** Streams real Gemini replies from `/api/chat` with server-side saving, markdown rendering, auto-generated titles and a mock mode; key files `app/api/chat/route.ts`, `lib/ai.ts`, `components/chat/ChatsProvider.tsx`.
