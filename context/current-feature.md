@@ -1,27 +1,20 @@
 # Current Feature
 
-Message Persistence: save chat messages to the database and load them back when a chat is opened.
+<!-- Feature name and short description -->
 
 ## Status
 
 <!-- Not Started | In Progress | Completed -->
 
-In Progress
+Completed
 
 ## Goals
 
 <!-- Goals and requirements -->
 
-- Save user messages and the placeholder assistant replies to the `Message` table through a Clerk-scoped server action
-- Load a chat's saved messages when opening `/chats/[chatId]`, so chats are no longer empty after a reload
-- Limit message length to 10,000 characters, enforced by Zod on the server and by the chat input
-
 ## Notes
 
 <!-- Any extra notes -->
-
-- Attachments are out of scope: only message text is saved, so file-only messages are not persisted
-- Action in `actions/messages.ts`, schema and limit in `lib/validations/messages.ts`
 
 ## Completed Features
 
@@ -36,3 +29,4 @@ In Progress
 - **Database Persistence:** Stores users, notebooks, chats and messages in Neon Postgres via Prisma, with Clerk-scoped server actions and a database-backed sidebar; key files `prisma/schema.prisma`, `actions/chats.ts`, `components/chat/ChatsProvider.tsx`.
 - **Notebook Pages:** Adds `/notebooks/[notebookId]` pages opened from the sidebar, with a past chats list, a chat input and a breadcrumb back from notebook chats; key files `components/notebook/NotebookView.tsx`, `components/sidebar/RoutedSidebar.tsx`, `components/chat/ChatView.tsx`.
 - **Database Error Handling:** Retries the chats query when Neon is unreachable and shows a branded error page instead of crashing; key files `lib/chats-data.ts`, `app/global-error.tsx`.
+- **Message Persistence:** Saves user messages and replies to the database and loads them on chat pages, with a 10,000 character limit; key files `actions/messages.ts`, `lib/validations/messages.ts`, `components/chat/ChatsProvider.tsx`.
