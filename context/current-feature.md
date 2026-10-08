@@ -1,20 +1,28 @@
-# Current Feature
+# Current Feature: AI Integration
 
-<!-- Feature name and short description -->
+Gemini replies and auto-generated chat titles, from `context/features/ai-integration-spec.md`.
 
 ## Status
 
 <!-- Not Started | In Progress | Completed -->
 
-Completed
+In Progress
 
 ## Goals
 
 <!-- Goals and requirements -->
 
+- Stream real Gemini replies from `POST /api/chat`, saving user and assistant messages on the server
+- Generate a chat title after the first reply with the `generateChatTitle` action, never overwriting a manual rename
+- Replace the mock reply in `ChatsProvider`, with abort and toast on errors
+
 ## Notes
 
 <!-- Any extra notes -->
+
+- Text only; attachments are not sent to the model
+- Packages `ai` and `@ai-sdk/google`; key is `GEMINI_API_KEY`, also needed on Vercel
+- Remove `addMessage` and its tests, since the route saves messages
 
 ## Completed Features
 

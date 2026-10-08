@@ -1,7 +1,14 @@
 "use server";
 
+import { generateText } from "ai";
 import { fail, ok } from "@/lib/action-result";
 import { CHAT_SELECT } from "@/lib/chats-data";
+import {
+  buildTitlePrompt,
+  cleanTitle,
+  getModel,
+  isAiEnabled,
+} from "@/lib/ai";
 import { db } from "@/lib/db";
 import { runAction } from "@/lib/run-action";
 import {
@@ -125,5 +132,44 @@ export async function deleteChat(input: {
   return runAction(chatIdSchema, input, async (userId, data) => {
     await db.chat.deleteMany({ where: { id: data.chatId, userId } });
     return ok(null);
+  });
+}
+
+/** Generates a short title from the first exchange; keeps the current title on any failure. */
+export async function generateChatTitle(input: {
+  chatId: string;
+}): Promise<ActionResult<{ title: string | null }>> {
+  return runAction(chatIdSchema, input, async (userId, data) => {
+    if (!isAiEnabled()) return ok({ title: null });
+    const chat = await db.chat.findFirst({
+      where: { id: data.chatId, userId, isCustomTitle: false },
+      select: {
+        messages: {
+          orderBy: { createdAt: "asc" },
+          take: 2,
+          select: { role: true, content: true },
+        },
+      },
+    });
+    const userMessage = chat?.messages.find((m) => m.role === "USER");
+    const assistantMessage = chat?.messages.find((m) => m.role === "ASSISTANT");
+    if (!userMessage || !assistantMessage) return ok({ title: null });
+
+    try {
+      const { text } = await generateText({
+        model: getModel(),
+        prompt: buildTitlePrompt(userMessage.content, assistantMessage.content),
+      });
+      const title = cleanTitle(text);
+      if (!title) return ok({ title: null });
+      const { count } = await db.chat.updateMany({
+        where: { id: data.chatId, userId, isCustomTitle: false },
+        data: { title },
+      });
+      return ok({ title: count ? title : null });
+    } catch (error) {
+      console.error(error);
+      return ok({ title: null });
+    }
   });
 }
