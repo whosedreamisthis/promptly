@@ -53,7 +53,7 @@ export async function POST(request: Request) {
     const user = await clerk.users.createUser({
       emailAddress: [`demo-${crypto.randomUUID()}@${DEMO_EMAIL_DOMAIN}`],
       firstName: "Demo",
-      lastName: "Recruiter",
+      lastName: "User",
       publicMetadata: { demo: true },
       skipPasswordRequirement: true,
     });
