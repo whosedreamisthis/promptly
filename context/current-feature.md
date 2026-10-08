@@ -1,24 +1,22 @@
 # Current Feature
 
-Rate Limit IP Hardening: stop clients from dodging per-IP limits by spoofing `x-forwarded-for`, and make the public demo endpoint harder to abuse (code-scanner findings 1 and 2).
+<!-- Feature name and short description -->
 
 ## Status
 
-In Progress
+<!-- Not Started | In Progress | Completed -->
+
+Completed
 
 ## Goals
 
-1. Add one shared `getClientIp` that reads the platform-set `x-real-ip` / `x-vercel-forwarded-for` header, and use it in both `/api/demo` and `/api/chat`.
-2. Make `/api/demo` fail closed (treated as limited, 429) when Upstash is configured but unreachable instead of using the per-instance in-memory limiter.
-3. Check demo capacity before spending the global quota, so rejected requests don't use it up.
+<!-- Goals and requirements -->
 
 ## Notes
 
-- Out of scope: bot protection, and scanner findings 3-8.
+<!-- Any extra notes -->
 
 ## Completed Features
-
-<!-- One line per completed feature, earliest to latest. Full details in context/feature-history.md -->
 
 - **Clerk Authentication:** Adds Clerk sign-in/register via nav bar modals and `(auth)` pages, Google and email/password; key files `proxy.ts`, `components/layout/NavBar.tsx`, `app/(auth)/`.
 - **Sidebar:** Adds a closable sidebar with search, new chat, collapsible notebooks and recents, and pin/rename/delete menus; key files `components/sidebar/`, `lib/mock-chats.ts`.
@@ -41,3 +39,4 @@ In Progress
 - **Demo Mode:** Adds a Try the demo button that signs visitors into a temporary, freshly seeded Clerk user, with a banner, usage limits and daily cleanup; key files `app/api/demo/route.ts`, `lib/seed-user.ts`, `components/layout/DemoButton.tsx`.
 - **Notebook Tweaks:** Adds a naming page for brand new notebooks before the regular page, and focuses the name field when renaming; key files `components/notebook/NotebookNameForm.tsx`, `lib/notebooks.ts`, `components/chat/ActionsMenu.tsx`.
 - **Confirm Delete:** Asks for confirmation in a shadcn alert dialog before a chat or notebook is deleted, in the sidebar and on notebook pages; key files `components/chat/ConfirmDeleteDialog.tsx`, `components/sidebar/useSidebarMenus.tsx`, `components/ui/alert-dialog.tsx`.
+- **Rate Limit IP Hardening:** Reads the client IP from platform-set headers instead of `x-forwarded-for`, makes the demo limits fail closed when Upstash is down, and checks demo capacity before the global quota; key files `lib/demo-limits.ts`, `lib/rate-limit.ts`, `app/api/demo/route.ts`.
