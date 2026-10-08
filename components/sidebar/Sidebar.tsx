@@ -62,10 +62,7 @@ export default function Sidebar({
     setRenamingId,
     chatActions,
     notebookActions,
-    pendingDelete,
-    deleteDialogOpen,
-    setDeleteDialogOpen,
-    confirmDelete,
+    deleteDialogProps,
   } = useSidebarMenus({ onDeleteChat, onDeleteNotebook });
   const [query, setQuery] = useState("");
   const [scrolled, setScrolled] = useState(false);
@@ -208,13 +205,7 @@ export default function Sidebar({
           feature="Notebooks"
           onSignIn={onClose}
         />
-        <ConfirmDeleteDialog
-          open={deleteDialogOpen}
-          onOpenChange={setDeleteDialogOpen}
-          kind={pendingDelete?.kind ?? "chat"}
-          title={pendingDelete?.title ?? ""}
-          onConfirm={confirmDelete}
-        />
+        <ConfirmDeleteDialog {...deleteDialogProps} />
       </aside>
     </>
   );

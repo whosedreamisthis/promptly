@@ -8,6 +8,7 @@ import ActionsMenu from "@/components/chat/ActionsMenu";
 import ChatInput from "@/components/chat/ChatInput";
 import ConfirmDeleteDialog from "@/components/chat/ConfirmDeleteDialog";
 import { useChats } from "@/components/chat/ChatsProvider";
+import { usePendingDelete } from "@/components/chat/usePendingDelete";
 import InlineRenameInput from "@/components/chat/InlineRenameInput";
 import NotebookNameForm from "@/components/notebook/NotebookNameForm";
 import { isUnnamedNotebook } from "@/lib/notebooks";
@@ -30,11 +31,8 @@ export default function NotebookView({ notebookId }: NotebookViewProps) {
     deleteChat,
   } = useChats();
   const [renamingId, setRenamingId] = useState<string | null>(null);
-  // Kept after closing so the dialog does not lose its text while it fades out.
-  const [deleting, setDeleting] = useState<{ id: string; title: string } | null>(
-    null,
-  );
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const { request: requestDelete, dialogProps: deleteDialogProps } =
+    usePendingDelete((item) => deleteChat(item.id));
   const notebook = notebooks.find((item) => item.id === notebookId);
 
   if (!notebook) {
@@ -126,10 +124,12 @@ export default function NotebookView({ notebookId }: NotebookViewProps) {
                         },
                         {
                           label: "Delete",
-                          onSelect: () => {
-                            setDeleting({ id: chat.id, title: chat.title });
-                            setDeleteDialogOpen(true);
-                          },
+                          onSelect: () =>
+                            requestDelete({
+                              kind: "chat",
+                              id: chat.id,
+                              title: chat.title,
+                            }),
                         },
                       ]}
                     />
@@ -143,16 +143,7 @@ export default function NotebookView({ notebookId }: NotebookViewProps) {
       <div className="shrink-0 px-14 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2">
         <ChatInput disabled={false} onSubmit={handleSubmit} />
       </div>
-      <ConfirmDeleteDialog
-        open={deleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
-        kind="chat"
-        title={deleting?.title ?? ""}
-        onConfirm={() => {
-          if (deleting) deleteChat(deleting.id);
-          setDeleteDialogOpen(false);
-        }}
-      />
+      <ConfirmDeleteDialog {...deleteDialogProps} />
     </div>
   );
 }
