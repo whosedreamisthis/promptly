@@ -1,5 +1,6 @@
 import Markdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { safeUrl } from "@/lib/safe-url";
 
 const MARKDOWN_CLASS = [
   "min-w-0 space-y-3 break-words",
@@ -29,7 +30,11 @@ interface ChatMarkdownProps {
 export default function ChatMarkdown({ children }: ChatMarkdownProps) {
   return (
     <div className={MARKDOWN_CLASS}>
-      <Markdown remarkPlugins={[remarkGfm]} components={MARKDOWN_COMPONENTS}>
+      <Markdown
+        remarkPlugins={[remarkGfm]}
+        components={MARKDOWN_COMPONENTS}
+        urlTransform={safeUrl}
+      >
         {children}
       </Markdown>
     </div>
