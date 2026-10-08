@@ -1,20 +1,20 @@
 # Current Feature
 
-<!-- Feature name and short description -->
+Rate Limit IP Hardening: stop clients from dodging per-IP limits by spoofing `x-forwarded-for`, and make the public demo endpoint harder to abuse (code-scanner findings 1 and 2).
 
 ## Status
 
-<!-- Not Started | In Progress | Completed -->
-
-Completed
+In Progress
 
 ## Goals
 
-<!-- Goals and requirements -->
+1. Add one shared `getClientIp` that reads the platform-set `x-real-ip` / `x-vercel-forwarded-for` header, and use it in both `/api/demo` and `/api/chat`.
+2. Make `/api/demo` fail closed (treated as limited, 429) when Upstash is configured but unreachable instead of using the per-instance in-memory limiter.
+3. Check demo capacity before spending the global quota, so rejected requests don't use it up.
 
 ## Notes
 
-<!-- Any extra notes -->
+- Out of scope: bot protection, and scanner findings 3-8.
 
 ## Completed Features
 

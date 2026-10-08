@@ -16,13 +16,23 @@ function fail(error: string, status: number) {
   return Response.json({ success: false, data: null, error }, { status });
 }
 
-/** Returns an error response when this request may not start a demo, otherwise null. */
-async function checkDemoLimits(request: Request): Promise<Response | null> {
+/**
+ * Returns an error response when this request may not start a demo, otherwise null.
+ * Capacity is checked before the global quota so a full demo doesn't use that quota up.
+ */
+async function checkDemoLimits(
+  request: Request,
+  clerk: Awaited<ReturnType<typeof clerkClient>>,
+): Promise<Response | null> {
   if (await isDemoIpLimited(getClientIp(request))) {
     return fail(
       "You've already started the demo a few times today. Please try again tomorrow.",
       429,
     );
+  }
+  const live = await clerk.users.getCount({ query: DEMO_EMAIL_DOMAIN });
+  if (isDemoCapacityFull(live)) {
+    return fail("The demo is busy right now. Please try again later.", 503);
   }
   if (await isDemoGloballyLimited()) {
     return fail(
@@ -35,15 +45,10 @@ async function checkDemoLimits(request: Request): Promise<Response | null> {
 
 /** Creates an isolated, freshly seeded demo user and returns a one-time sign-in token for it. */
 export async function POST(request: Request) {
-  const limited = await checkDemoLimits(request);
-  if (limited) return limited;
-
   try {
     const clerk = await clerkClient();
-    const live = await clerk.users.getCount({ query: DEMO_EMAIL_DOMAIN });
-    if (isDemoCapacityFull(live)) {
-      return fail("The demo is busy right now. Please try again later.", 503);
-    }
+    const limited = await checkDemoLimits(request, clerk);
+    if (limited) return limited;
 
     const user = await clerk.users.createUser({
       emailAddress: [`demo-${crypto.randomUUID()}@${DEMO_EMAIL_DOMAIN}`],

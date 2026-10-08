@@ -23,7 +23,7 @@ import { resetRateLimits } from "@/lib/rate-limit";
 function demoRequest(ip = "1.1.1.1") {
   return new Request("http://localhost/api/demo", {
     method: "POST",
-    headers: { "x-forwarded-for": ip },
+    headers: { "x-real-ip": ip },
   });
 }
 
@@ -84,6 +84,15 @@ describe("POST /api/demo", () => {
 
     expect(response.status).toBe(503);
     expect(clerk.users.createUser).not.toHaveBeenCalled();
+  });
+
+  it("does not use the global quota while the demo is full", async () => {
+    vi.stubEnv("DEMO_LIMIT_GLOBAL", "1");
+    clerk.users.getCount.mockResolvedValue(MAX_LIVE_DEMO_USERS);
+    expect((await POST(demoRequest())).status).toBe(503);
+
+    clerk.users.getCount.mockResolvedValue(0);
+    expect((await POST(demoRequest())).status).toBe(200);
   });
 
   it("deletes the new user when seeding fails", async () => {
