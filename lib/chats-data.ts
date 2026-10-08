@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { DB_UNREACHABLE_CODE, hasErrorCode } from "@/lib/db-errors";
 import type { ChatsData } from "@/types/chats";
 
 export const CHAT_SELECT = {
@@ -10,7 +11,11 @@ export const CHAT_SELECT = {
 
 const NOTEBOOK_SELECT = { id: true, title: true, pinned: true } as const;
 
-const DB_UNREACHABLE_CODE = "P1001";
+/** Most recent chats and notebooks loaded into the sidebar. */
+export const LIST_LIMIT = 100;
+/** Most recent messages loaded when a chat is opened. */
+export const MESSAGE_LIMIT = 200;
+
 const MAX_ATTEMPTS = 3;
 const RETRY_DELAY_MS = 1500;
 
@@ -20,8 +25,9 @@ async function withDbRetry<T>(operation: () => Promise<T>): Promise<T> {
     try {
       return await operation();
     } catch (error) {
-      const code = (error as { code?: unknown } | null)?.code;
-      if (code !== DB_UNREACHABLE_CODE || attempt >= MAX_ATTEMPTS) throw error;
+      if (!hasErrorCode(error, DB_UNREACHABLE_CODE) || attempt >= MAX_ATTEMPTS) {
+        throw error;
+      }
       await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS * attempt));
     }
   }
@@ -37,25 +43,30 @@ async function queryChatsData(userId: string): Promise<ChatsData> {
       where: { userId },
       select: CHAT_SELECT,
       orderBy: { updatedAt: "desc" },
+      take: LIST_LIMIT,
     }),
     db.notebook.findMany({
       where: { userId },
       select: NOTEBOOK_SELECT,
       orderBy: { updatedAt: "desc" },
+      take: LIST_LIMIT,
     }),
   ]);
   return { chats, notebooks };
 }
 
+/** Loads a chat with its most recent messages, oldest first. */
 export async function getChatWithMessages(userId: string, chatId: string) {
-  return db.chat.findFirst({
+  const chat = await db.chat.findFirst({
     where: { id: chatId, userId },
     select: {
       ...CHAT_SELECT,
       messages: {
-        orderBy: { createdAt: "asc" },
+        orderBy: { createdAt: "desc" },
+        take: MESSAGE_LIMIT,
         select: { id: true, role: true, content: true },
       },
     },
   });
+  return chat && { ...chat, messages: chat.messages.reverse() };
 }

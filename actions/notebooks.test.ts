@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const { auth, db } = vi.hoisted(() => ({
   auth: vi.fn(),
   db: {
-    user: { upsert: vi.fn() },
+    user: { findUnique: vi.fn(), upsert: vi.fn() },
     notebook: {
       findUnique: vi.fn(),
       findFirst: vi.fn(),
@@ -22,6 +22,7 @@ import {
   createNotebook,
   deleteNotebook,
   renameNotebook,
+  setNotebookPinned,
 } from "@/actions/notebooks";
 
 describe("notebook actions", () => {
@@ -42,7 +43,6 @@ describe("notebook actions", () => {
   });
 
   it("creates a notebook for the signed-in user", async () => {
-    db.notebook.findUnique.mockResolvedValue(null);
     const result = await createNotebook({ id: "n1", title: "Ideas" });
     expect(result.success).toBe(true);
     expect(db.notebook.create).toHaveBeenCalledWith({
@@ -51,10 +51,27 @@ describe("notebook actions", () => {
   });
 
   it("does not reuse a notebook id owned by someone else", async () => {
+    db.notebook.create.mockRejectedValue({ code: "P2002" });
     db.notebook.findUnique.mockResolvedValue({ userId: "user_2" });
     const result = await createNotebook({ id: "n1", title: "Ideas" });
     expect(result.success).toBe(false);
-    expect(db.notebook.create).not.toHaveBeenCalled();
+  });
+
+  it("treats a repeated create of the user's own notebook as success", async () => {
+    db.notebook.create.mockRejectedValue({ code: "P2002" });
+    db.notebook.findUnique.mockResolvedValue({ userId: "user_1" });
+    const result = await createNotebook({ id: "n1", title: "Ideas" });
+    expect(result.success).toBe(true);
+  });
+
+  it("sets the pinned flag to the requested value, scoped to the owner", async () => {
+    db.notebook.updateMany.mockResolvedValue({ count: 1 });
+    const result = await setNotebookPinned({ notebookId: "n1", pinned: true });
+    expect(result.success).toBe(true);
+    expect(db.notebook.updateMany).toHaveBeenCalledWith({
+      where: { id: "n1", userId: "user_1" },
+      data: { pinned: true },
+    });
   });
 
   it("scopes renames to the owner", async () => {

@@ -1,4 +1,4 @@
-import Markdown from "react-markdown";
+import Markdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 const MARKDOWN_CLASS = [
@@ -13,6 +13,15 @@ const MARKDOWN_CLASS = [
   "[&_table]:w-full [&_table]:text-sm [&_th]:border [&_th]:border-surface-border [&_th]:px-2 [&_th]:py-1 [&_th]:text-left [&_td]:border [&_td]:border-surface-border [&_td]:px-2 [&_td]:py-1",
 ].join(" ");
 
+/** Model-generated links open in a new tab without access to this page. */
+const MARKDOWN_COMPONENTS: Components = {
+  a: ({ href, children }) => (
+    <a href={href} target="_blank" rel="noopener noreferrer">
+      {children}
+    </a>
+  ),
+};
+
 interface ChatMarkdownProps {
   children: string;
 }
@@ -20,7 +29,9 @@ interface ChatMarkdownProps {
 export default function ChatMarkdown({ children }: ChatMarkdownProps) {
   return (
     <div className={MARKDOWN_CLASS}>
-      <Markdown remarkPlugins={[remarkGfm]}>{children}</Markdown>
+      <Markdown remarkPlugins={[remarkGfm]} components={MARKDOWN_COMPONENTS}>
+        {children}
+      </Markdown>
     </div>
   );
 }

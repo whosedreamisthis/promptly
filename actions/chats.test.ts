@@ -4,7 +4,7 @@ const { auth, db, generateText } = vi.hoisted(() => ({
   auth: vi.fn(),
   generateText: vi.fn(),
   db: {
-    user: { upsert: vi.fn() },
+    user: { findUnique: vi.fn(), upsert: vi.fn() },
     chat: {
       findUnique: vi.fn(),
       findFirst: vi.fn(),
@@ -27,8 +27,9 @@ import {
   generateChatTitle,
   moveChatToNotebook,
   renameChat,
-  togglePinChat,
+  setChatPinned,
 } from "@/actions/chats";
+import { resetRateLimits } from "@/lib/rate-limit";
 
 describe("chat actions", () => {
   beforeEach(() => {
@@ -49,7 +50,7 @@ describe("chat actions", () => {
   });
 
   it("creates the user row and a chat for a new id", async () => {
-    db.chat.findUnique.mockResolvedValue(null);
+    db.user.findUnique.mockResolvedValue(null);
     db.chat.create.mockResolvedValue({
       id: "c1",
       title: "New Chat",
@@ -63,7 +64,28 @@ describe("chat actions", () => {
     expect(result).toMatchObject({ success: true, data: { id: "c1" } });
   });
 
+  it("skips the user write when the user row already exists", async () => {
+    db.user.findUnique.mockResolvedValue({ id: "user_1" });
+    db.chat.create.mockResolvedValue({ id: "c1" });
+    await createChat({ id: "c1" });
+    expect(db.user.upsert).not.toHaveBeenCalled();
+  });
+
+  it("returns the existing chat when a concurrent create hits the unique id", async () => {
+    db.chat.create.mockRejectedValue({ code: "P2002" });
+    db.chat.findUnique.mockResolvedValue({
+      id: "c1",
+      userId: "user_1",
+      title: "Mine",
+      pinned: false,
+      notebookId: null,
+    });
+    const result = await createChat({ id: "c1" });
+    expect(result).toMatchObject({ success: true, data: { title: "Mine" } });
+  });
+
   it("does not expose a chat owned by someone else", async () => {
+    db.chat.create.mockRejectedValue({ code: "P2002" });
     db.chat.findUnique.mockResolvedValue({
       id: "c1",
       userId: "user_2",
@@ -73,11 +95,9 @@ describe("chat actions", () => {
     });
     const result = await createChat({ id: "c1" });
     expect(result).toMatchObject({ success: false, error: "Chat not found" });
-    expect(db.chat.create).not.toHaveBeenCalled();
   });
 
   it("refuses to attach a new chat to a notebook the user doesn't own", async () => {
-    db.chat.findUnique.mockResolvedValue(null);
     db.notebook.findFirst.mockResolvedValue(null);
     const result = await createChat({ id: "c1", notebookId: "n1" });
     expect(result).toMatchObject({ success: false });
@@ -109,13 +129,20 @@ describe("chat actions", () => {
     });
   });
 
-  it("toggles the pinned flag", async () => {
-    db.chat.findFirst.mockResolvedValue({ pinned: false });
-    await togglePinChat({ chatId: "c1" });
-    expect(db.chat.update).toHaveBeenCalledWith({
-      where: { id: "c1" },
+  it("sets the pinned flag to the requested value, scoped to the user", async () => {
+    db.chat.updateMany.mockResolvedValue({ count: 1 });
+    const result = await setChatPinned({ chatId: "c1", pinned: true });
+    expect(result.success).toBe(true);
+    expect(db.chat.updateMany).toHaveBeenCalledWith({
+      where: { id: "c1", userId: "user_1" },
       data: { pinned: true },
     });
+  });
+
+  it("reports not found when pinning a chat the user doesn't own", async () => {
+    db.chat.updateMany.mockResolvedValue({ count: 0 });
+    const result = await setChatPinned({ chatId: "c1", pinned: false });
+    expect(result).toMatchObject({ success: false, error: "Chat not found" });
   });
 
   it("checks notebook ownership when moving a chat", async () => {
@@ -141,8 +168,13 @@ describe("generateChatTitle", () => {
   ];
 
   beforeEach(() => {
+    resetRateLimits();
     auth.mockResolvedValue({ userId: "user_1" });
-    db.chat.findFirst.mockResolvedValue({ messages: exchange });
+    db.user.findUnique.mockResolvedValue({ id: "user_1" });
+    db.chat.findFirst.mockResolvedValue({
+      _count: { messages: 2 },
+      messages: exchange,
+    });
     generateText.mockResolvedValue({ text: '"Deploying To Vercel."' });
     db.chat.updateMany.mockResolvedValue({ count: 1 });
   });
@@ -174,9 +206,32 @@ describe("generateChatTitle", () => {
   });
 
   it("returns no title when the chat has no reply yet", async () => {
-    db.chat.findFirst.mockResolvedValue({ messages: [exchange[0]] });
+    db.chat.findFirst.mockResolvedValue({
+      _count: { messages: 1 },
+      messages: [exchange[0]],
+    });
     const result = await generateChatTitle({ chatId: "c1" });
     expect(result).toMatchObject({ data: { title: null } });
+    expect(generateText).not.toHaveBeenCalled();
+  });
+
+  it("only titles the first exchange, not later turns", async () => {
+    db.chat.findFirst.mockResolvedValue({
+      _count: { messages: 6 },
+      messages: exchange,
+    });
+    const result = await generateChatTitle({ chatId: "c1" });
+    expect(result).toMatchObject({ success: true, data: { title: null } });
+    expect(generateText).not.toHaveBeenCalled();
+  });
+
+  it("stops calling the model once the rate limit is reached", async () => {
+    for (let call = 0; call < 20; call++) {
+      await generateChatTitle({ chatId: "c1" });
+    }
+    generateText.mockClear();
+    const result = await generateChatTitle({ chatId: "c1" });
+    expect(result).toMatchObject({ success: true, data: { title: null } });
     expect(generateText).not.toHaveBeenCalled();
   });
 

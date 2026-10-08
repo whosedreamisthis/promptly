@@ -12,7 +12,7 @@ export const SYSTEM_PROMPT =
 const MOCK_CHUNK_DELAY_MS = 25;
 
 export const MOCK_REPLY = [
-  "This is a **mock reply**. Set `USE_AI_MODEL=true` in `.env` to get real answers from Gemini.",
+  "This is a **mock reply**. Remove `USE_AI_MODEL=false` from `.env` (or set it to `true`) to get real answers from Gemini.",
   "",
   "Here is a short list and a code sample so you can check the formatting:",
   "",
@@ -65,9 +65,9 @@ export function getModel() {
   return google(GEMINI_MODEL);
 }
 
-/** Maps stored messages to model messages, keeping only the most recent ones. */
+/** Maps stored messages to model messages; callers limit the history to HISTORY_LIMIT. */
 export function toModelMessages(history: HistoryMessage[]) {
-  return history.slice(-HISTORY_LIMIT).map(({ role, content }) => ({
+  return history.map(({ role, content }) => ({
     role: role === "USER" ? ("user" as const) : ("assistant" as const),
     content,
   }));

@@ -12,6 +12,8 @@
   --color-pastel-mint: #a7f3d0;
   --color-pastel-lavender: #ddd6fe;
   --color-pastel-peach: #fed7aa;
+  --color-pastel-blush: #fbcfe8;
+  --shadow-soft: 0 4px 20px -2px rgb(41 37 36 / 0.05);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-heading: var(--font-sans);

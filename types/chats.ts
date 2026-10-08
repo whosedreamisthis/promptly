@@ -17,3 +17,15 @@ export interface ChatsData {
   chats: Chat[];
   notebooks: Notebook[];
 }
+
+export interface ChatMessage {
+  id: string;
+  role: "user" | "assistant";
+  text: string;
+  fileNames: string[];
+}
+
+export interface ChatSubmission {
+  text: string;
+  files: File[];
+}

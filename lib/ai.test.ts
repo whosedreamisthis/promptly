@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from "vitest";
 import {
   buildTitlePrompt,
   cleanTitle,
-  HISTORY_LIMIT,
   isAiEnabled,
   MOCK_REPLY,
   mockReplyStream,
@@ -27,15 +26,15 @@ describe("cleanTitle", () => {
 });
 
 describe("toModelMessages", () => {
-  it("maps roles and keeps only the most recent messages", () => {
-    const history = Array.from({ length: HISTORY_LIMIT + 5 }, (_, index) => ({
-      role: index % 2 === 0 ? ("USER" as const) : ("ASSISTANT" as const),
-      content: `m${index}`,
-    }));
-    const messages = toModelMessages(history);
-    expect(messages).toHaveLength(HISTORY_LIMIT);
-    expect(messages[0].content).toBe("m5");
-    expect(messages[0].role).toBe("assistant");
+  it("maps roles and keeps the order", () => {
+    const messages = toModelMessages([
+      { role: "USER", content: "hi" },
+      { role: "ASSISTANT", content: "hello" },
+    ]);
+    expect(messages).toEqual([
+      { role: "user", content: "hi" },
+      { role: "assistant", content: "hello" },
+    ]);
   });
 });
 

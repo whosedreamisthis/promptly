@@ -10,7 +10,7 @@ interface RoutedSidebarProps {
   onClose: () => void;
 }
 
-/** Connects the sidebar to chat state and routing; reads the URL, so render it inside Suspense. */
+/** Connects the sidebar to routing; reads the URL, so render it inside Suspense. */
 export default function RoutedSidebar({
   closed,
   mobileOpen,
@@ -18,19 +18,7 @@ export default function RoutedSidebar({
 }: RoutedSidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const {
-    chats,
-    notebooks,
-    createChat,
-    renameChat,
-    togglePinChat,
-    deleteChat,
-    moveChatToNotebook,
-    createNotebook,
-    renameNotebook,
-    togglePinNotebook,
-    deleteNotebook,
-  } = useChats();
+  const { createChat, deleteChat, deleteNotebook } = useChats();
   const activeChatId = pathname.startsWith("/chats/")
     ? pathname.split("/")[2]
     : null;
@@ -60,8 +48,6 @@ export default function RoutedSidebar({
 
   return (
     <Sidebar
-      chats={chats}
-      notebooks={notebooks}
       activeChatId={activeChatId}
       activeNotebookId={activeNotebookId}
       closed={closed}
@@ -70,13 +56,7 @@ export default function RoutedSidebar({
       onNewChat={handleNewChat}
       onSelectChat={handleSelectChat}
       onSelectNotebook={handleSelectNotebook}
-      onRenameChat={renameChat}
-      onTogglePinChat={togglePinChat}
       onDeleteChat={handleDeleteChat}
-      onMoveChat={moveChatToNotebook}
-      onNewNotebook={createNotebook}
-      onRenameNotebook={renameNotebook}
-      onTogglePinNotebook={togglePinNotebook}
       onDeleteNotebook={handleDeleteNotebook}
     />
   );

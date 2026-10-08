@@ -4,9 +4,9 @@ import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
-import ChatInput, { type ChatSubmission } from "@/components/chat/ChatInput";
-import ChatThread, { type ChatMessage } from "@/components/chat/ChatThread";
-import { useChats } from "@/components/chat/ChatsProvider";
+import ChatInput from "@/components/chat/ChatInput";
+import ChatThread from "@/components/chat/ChatThread";
+import { useChats, useMessages } from "@/components/chat/ChatsProvider";
 import Logo from "@/components/layout/Logo";
 import {
   Breadcrumb,
@@ -16,6 +16,9 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import type { ChatMessage, ChatSubmission } from "@/types/chats";
+
+const NO_MESSAGES: ChatMessage[] = [];
 
 interface ChatViewProps {
   /** Omitted on the home page, which uses a pre-generated id until the first message. */
@@ -26,7 +29,7 @@ interface ChatViewProps {
 
 export default function ChatView({
   chatId,
-  initialMessages = [],
+  initialMessages = NO_MESSAGES,
 }: ChatViewProps) {
   const { user } = useUser();
   // Generated up front so the chat is saved under this id once the user sends a message.
@@ -37,20 +40,13 @@ export default function ChatView({
   }, []);
 
   const router = useRouter();
-  const {
-    chats,
-    notebooks,
-    messagesByChat,
-    seedMessages,
-    streamingChatIds,
-    sendMessage,
-  } = useChats();
+  const { chats, notebooks, seedMessages, sendMessage } = useChats();
+  const { messagesByChat, streamingChatIds } = useMessages();
 
   useEffect(() => {
+    // Seeding is a no-op once the chat has messages in memory.
     if (chatId) seedMessages(chatId, initialMessages);
-    // Seed once per opened chat; later changes come from the provider.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chatId]);
+  }, [chatId, initialMessages, seedMessages]);
   const chat = chats.find((item) => item.id === chatId);
   const notebook = notebooks.find((item) => item.id === chat?.notebookId);
 
@@ -100,7 +96,7 @@ export default function ChatView({
             <h1 className="text-3xl font-medium text-foreground">{greeting}</h1>
           </div>
         ) : (
-          <ChatThread messages={messages} />
+          <ChatThread messages={messages} streaming={streaming} />
         )}
       </div>
       <div className="shrink-0 px-14 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2">

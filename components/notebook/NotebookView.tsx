@@ -1,61 +1,17 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { BookOpen, MoreVertical } from "lucide-react";
-import ChatInput, { type ChatSubmission } from "@/components/chat/ChatInput";
+import { BookOpen } from "lucide-react";
+import ActionsMenu from "@/components/chat/ActionsMenu";
+import ChatInput from "@/components/chat/ChatInput";
 import { useChats } from "@/components/chat/ChatsProvider";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import InlineRenameInput from "@/components/chat/InlineRenameInput";
+import type { ChatSubmission } from "@/types/chats";
 
 interface NotebookViewProps {
   notebookId: string;
-}
-
-interface RenameFieldProps {
-  title: string;
-  onRename: (title: string) => void;
-  onCancel: () => void;
-}
-
-function RenameField({ title, onRename, onCancel }: RenameFieldProps) {
-  const settled = useRef(false);
-
-  const finish = (value: string) => {
-    if (settled.current) return;
-    settled.current = true;
-    const next = value.trim();
-    if (next && next !== title) onRename(next);
-    else onCancel();
-  };
-
-  return (
-    <Input
-      autoFocus
-      defaultValue={title}
-      aria-label="Rename chat"
-      onFocus={(event) => {
-        settled.current = false;
-        event.currentTarget.select();
-      }}
-      onBlur={(event) => finish(event.currentTarget.value)}
-      onKeyDown={(event) => {
-        if (event.key === "Enter") finish(event.currentTarget.value);
-        if (event.key === "Escape") {
-          settled.current = true;
-          onCancel();
-        }
-      }}
-      className="mx-3 my-1.5 h-9 min-w-0 flex-1 bg-white"
-    />
-  );
 }
 
 export default function NotebookView({ notebookId }: NotebookViewProps) {
@@ -117,13 +73,15 @@ export default function NotebookView({ notebookId }: NotebookViewProps) {
                     className="flex items-center rounded-md hover:bg-pastel-peach"
                   >
                     {renamingId === chat.id ? (
-                      <RenameField
-                        title={chat.title}
+                      <InlineRenameInput
+                        value={chat.title}
+                        ariaLabel="Rename chat"
                         onRename={(title) => {
                           renameChat(chat.id, title);
                           setRenamingId(null);
                         }}
                         onCancel={() => setRenamingId(null)}
+                        className="mx-3 my-1.5 h-9 min-w-0 flex-1 bg-white"
                       />
                     ) : (
                       <Link
@@ -133,43 +91,28 @@ export default function NotebookView({ notebookId }: NotebookViewProps) {
                         {chat.title}
                       </Link>
                     )}
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          aria-label={`Actions for ${chat.title}`}
-                        >
-                          <MoreVertical className="size-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent
-                        align="end"
-                        onCloseAutoFocus={(event) => {
-                          // Keep focus on the rename field instead of returning it to the trigger.
-                          if (renamingId) event.preventDefault();
-                        }}
-                      >
-                        <DropdownMenuItem
-                          onSelect={() => setRenamingId(chat.id)}
-                        >
-                          Rename
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onSelect={() => togglePinChat(chat.id)}
-                        >
-                          {chat.pinned ? "Unpin" : "Pin"}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onSelect={() => moveChatToNotebook(chat.id, null)}
-                        >
-                          Remove from notebook
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => deleteChat(chat.id)}>
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <ActionsMenu
+                      label={`Actions for ${chat.title}`}
+                      keepFocus={renamingId !== null}
+                      actions={[
+                        {
+                          label: "Rename",
+                          onSelect: () => setRenamingId(chat.id),
+                        },
+                        {
+                          label: chat.pinned ? "Unpin" : "Pin",
+                          onSelect: () => togglePinChat(chat.id),
+                        },
+                        {
+                          label: "Remove from notebook",
+                          onSelect: () => moveChatToNotebook(chat.id, null),
+                        },
+                        {
+                          label: "Delete",
+                          onSelect: () => deleteChat(chat.id),
+                        },
+                      ]}
+                    />
                   </li>
                 ))}
               </ul>

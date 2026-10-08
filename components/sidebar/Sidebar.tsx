@@ -1,40 +1,22 @@
 "use client";
 
 import { useState } from "react";
-import { Show, UserButton } from "@clerk/nextjs";
-import {
-  BookOpen,
-  BookPlus,
-  MessageSquare,
-  Pencil,
-  Pin,
-  PinOff,
-  Plus,
-  Search,
-  Settings,
-  Share2,
-  SquarePen,
-  Trash2,
-  User,
-  X,
-} from "lucide-react";
-import Logo from "@/components/layout/Logo";
+import { BookOpen, MessageSquare, Plus, Search, SquarePen } from "lucide-react";
+import { useChats } from "@/components/chat/ChatsProvider";
 import { Button } from "@/components/ui/button";
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
 } from "@/components/ui/input-group";
-import SettingsModal from "@/components/sidebar/SettingsModal";
-import { USER_MENU_POPOVER_CLASS } from "@/lib/clerk-appearance";
-import type { MenuAction } from "@/components/sidebar/SidebarItem";
+import SidebarFooter from "@/components/sidebar/SidebarFooter";
+import SidebarHeader from "@/components/sidebar/SidebarHeader";
 import SidebarItem from "@/components/sidebar/SidebarItem";
 import SidebarSection from "@/components/sidebar/SidebarSection";
-import type { Chat, Notebook } from "@/types/chats";
+import { useSidebarMenus } from "@/components/sidebar/useSidebarMenus";
+import { cn } from "@/lib/utils";
 
 interface SidebarProps {
-  chats: Chat[];
-  notebooks: Notebook[];
   activeChatId: string | null;
   activeNotebookId: string | null;
   closed: boolean;
@@ -43,14 +25,7 @@ interface SidebarProps {
   onNewChat: () => void;
   onSelectChat: (id: string) => void;
   onSelectNotebook: (id: string) => void;
-  onRenameChat: (id: string, title: string) => void;
-  onTogglePinChat: (id: string) => void;
   onDeleteChat: (id: string) => void;
-  onMoveChat: (chatId: string, notebookId: string | null) => void;
-  /** Creates a notebook and returns its id. */
-  onNewNotebook: () => string;
-  onRenameNotebook: (id: string, title: string) => void;
-  onTogglePinNotebook: (id: string) => void;
   onDeleteNotebook: (id: string) => void;
 }
 
@@ -59,8 +34,6 @@ function pinnedFirst<T extends { pinned?: boolean }>(items: T[]): T[] {
 }
 
 export default function Sidebar({
-  chats,
-  notebooks,
   activeChatId,
   activeNotebookId,
   closed,
@@ -69,19 +42,15 @@ export default function Sidebar({
   onNewChat,
   onSelectChat,
   onSelectNotebook,
-  onRenameChat,
-  onTogglePinChat,
   onDeleteChat,
-  onMoveChat,
-  onNewNotebook,
-  onRenameNotebook,
-  onTogglePinNotebook,
   onDeleteNotebook,
 }: SidebarProps) {
+  const { chats, notebooks, renameChat, renameNotebook, createNotebook } =
+    useChats();
+  const { renamingId, setRenamingId, chatActions, notebookActions } =
+    useSidebarMenus({ onDeleteChat, onDeleteNotebook });
   const [query, setQuery] = useState("");
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [renamingId, setRenamingId] = useState<string | null>(null);
 
   const filtered = pinnedFirst(
     chats.filter((chat) =>
@@ -99,74 +68,6 @@ export default function Sidebar({
     onClose();
   };
 
-  const handleNewNotebook = () => {
-    handleSelectNotebook(onNewNotebook());
-  };
-
-  const chatActions = (chat: Chat): MenuAction[] => [
-    {
-      label: "Share conversation",
-      icon: <Share2 className="h-4 w-4" />,
-      onSelect: () => {
-        void navigator.clipboard?.writeText(
-          `${window.location.origin}/chat/${chat.id}`,
-        );
-      },
-    },
-    {
-      label: chat.pinned ? "Unpin" : "Pin",
-      icon: chat.pinned ? (
-        <PinOff className="h-4 w-4" />
-      ) : (
-        <Pin className="h-4 w-4" />
-      ),
-      onSelect: () => onTogglePinChat(chat.id),
-    },
-    {
-      label: "Rename",
-      icon: <Pencil className="h-4 w-4" />,
-      onSelect: () => setRenamingId(chat.id),
-    },
-    {
-      label: "Add to notebook",
-      icon: <BookPlus className="h-4 w-4" />,
-      children: notebooks.map((notebook) => ({
-        label: notebook.title,
-        icon: <BookOpen className="h-4 w-4" />,
-        onSelect: () => onMoveChat(chat.id, notebook.id),
-      })),
-    },
-    {
-      label: "Delete",
-      icon: <Trash2 className="h-4 w-4" />,
-      danger: true,
-      onSelect: () => onDeleteChat(chat.id),
-    },
-  ];
-
-  const notebookActions = (notebook: Notebook): MenuAction[] => [
-    {
-      label: notebook.pinned ? "Unpin" : "Pin",
-      icon: notebook.pinned ? (
-        <PinOff className="h-4 w-4" />
-      ) : (
-        <Pin className="h-4 w-4" />
-      ),
-      onSelect: () => onTogglePinNotebook(notebook.id),
-    },
-    {
-      label: "Rename",
-      icon: <Pencil className="h-4 w-4" />,
-      onSelect: () => setRenamingId(notebook.id),
-    },
-    {
-      label: "Delete",
-      icon: <Trash2 className="h-4 w-4" />,
-      danger: true,
-      onSelect: () => onDeleteNotebook(notebook.id),
-    },
-  ];
-
   return (
     <>
       {mobileOpen && (
@@ -177,29 +78,19 @@ export default function Sidebar({
         />
       )}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col overflow-hidden border-r border-surface-border bg-[#F3F0F8] transition-all duration-300 ease-in-out ${
-          mobileOpen ? "translate-x-0" : "-translate-x-full max-md:invisible"
-        } ${closed ? "md:invisible md:-translate-x-full" : "md:translate-x-0"}`}
+        className={cn(
+          "fixed inset-y-0 left-0 z-40 flex w-64 flex-col overflow-hidden border-r border-surface-border bg-sidebar transition-all duration-300 ease-in-out",
+          mobileOpen ? "translate-x-0" : "-translate-x-full max-md:invisible",
+          closed ? "md:invisible md:-translate-x-full" : "md:translate-x-0",
+        )}
       >
-        <div className="flex h-16 shrink-0 items-center gap-2 px-3">
-          <div className="flex min-w-0 flex-1 items-center gap-2 pl-1">
-            <Logo className="h-7 w-7 shrink-0" />
-            <span className="truncate text-lg font-semibold">Promptly</span>
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label="Close sidebar"
-            onClick={onClose}
-          >
-            <X className="size-5" />
-          </Button>
-        </div>
+        <SidebarHeader onClose={onClose} />
 
         <div
-          className={`flex shrink-0 flex-col gap-1 border-b px-3 pb-2 transition-colors ${
-            scrolled ? "border-surface-border" : "border-transparent"
-          }`}
+          className={cn(
+            "flex shrink-0 flex-col gap-1 border-b px-3 pb-2 transition-colors",
+            scrolled ? "border-surface-border" : "border-transparent",
+          )}
         >
           <InputGroup className="h-9 bg-white">
             <InputGroupAddon>
@@ -234,8 +125,8 @@ export default function Sidebar({
           <SidebarSection title="Notebooks">
             <Button
               variant="ghost"
-              className="h-10 w-full justify-start gap-3 rounded-full pl-3 font-normal"
-              onClick={handleNewNotebook}
+              className="h-10 w-full justify-start gap-3 pl-3 font-normal"
+              onClick={() => handleSelectNotebook(createNotebook())}
             >
               <Plus className="size-5" />
               New notebook
@@ -246,12 +137,12 @@ export default function Sidebar({
                 icon={<BookOpen className="h-5 w-5" />}
                 label={notebook.title}
                 active={notebook.id === activeNotebookId}
-                pinned={!!notebook.pinned}
+                pinned={notebook.pinned}
                 renaming={renamingId === notebook.id}
                 actions={notebookActions(notebook)}
                 onSelect={() => handleSelectNotebook(notebook.id)}
                 onRename={(title) => {
-                  onRenameNotebook(notebook.id, title);
+                  renameNotebook(notebook.id, title);
                   setRenamingId(null);
                 }}
                 onCancelRename={() => setRenamingId(null)}
@@ -270,12 +161,12 @@ export default function Sidebar({
                   icon={<MessageSquare className="h-4 w-4" />}
                   label={chat.title}
                   active={!activeNotebookId && chat.id === activeChatId}
-                  pinned={!!chat.pinned}
+                  pinned={chat.pinned}
                   renaming={renamingId === chat.id}
                   actions={chatActions(chat)}
                   onSelect={() => handleSelectChat(chat.id)}
                   onRename={(title) => {
-                    onRenameChat(chat.id, title);
+                    renameChat(chat.id, title);
                     setRenamingId(null);
                   }}
                   onCancelRename={() => setRenamingId(null)}
@@ -285,42 +176,8 @@ export default function Sidebar({
           </SidebarSection>
         </nav>
 
-        <div className="mt-auto flex shrink-0 items-center gap-2 border-t border-surface-border p-3">
-          <Show when="signed-in">
-            <div className="min-w-0 flex-1">
-              <UserButton
-                showName
-                appearance={{
-                  elements: {
-                    userButtonPopoverCard: USER_MENU_POPOVER_CLASS,
-                    userButtonBox: "!flex-row !justify-start gap-2",
-                    userButtonAvatarBox: "!order-first",
-                    userButtonOuterIdentifier:
-                      "!order-last truncate text-sm font-medium text-foreground",
-                    userButtonTrigger:
-                      "w-full justify-start rounded-md p-1 hover:bg-[#EFE8F6] focus:shadow-none",
-                  },
-                }}
-              />
-            </div>
-          </Show>
-          <Show when="signed-out">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-pastel-lavender">
-              <User className="h-5 w-5" />
-            </span>
-            <p className="min-w-0 flex-1 truncate text-sm font-medium">Guest</p>
-          </Show>
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label="Settings"
-            onClick={() => setSettingsOpen(true)}
-          >
-            <Settings className="size-5" />
-          </Button>
-        </div>
+        <SidebarFooter />
       </aside>
-      <SettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} />
     </>
   );
 }

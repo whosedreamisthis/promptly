@@ -5,10 +5,16 @@ import { db } from "@/lib/db";
 export async function ensureUser(): Promise<string | null> {
   const { userId } = await auth();
   if (!userId) return null;
-  await db.user.upsert({
+  const existing = await db.user.findUnique({
     where: { id: userId },
-    create: { id: userId },
-    update: {},
+    select: { id: true },
   });
+  if (!existing) {
+    await db.user.upsert({
+      where: { id: userId },
+      create: { id: userId },
+      update: {},
+    });
+  }
   return userId;
 }

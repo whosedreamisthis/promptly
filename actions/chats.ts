@@ -10,37 +10,31 @@ import {
   isAiEnabled,
 } from "@/lib/ai";
 import { db } from "@/lib/db";
+import { hasErrorCode, UNIQUE_VIOLATION_CODE } from "@/lib/db-errors";
+import { isRateLimited } from "@/lib/rate-limit";
 import { runAction } from "@/lib/run-action";
 import {
   chatIdSchema,
   createChatSchema,
   moveChatSchema,
   renameChatSchema,
+  setChatPinnedSchema,
+  type ChatIdInput,
+  type CreateChatInput,
+  type MoveChatInput,
+  type RenameChatInput,
+  type SetChatPinnedInput,
 } from "@/lib/validations/chats";
 import type { ActionResult } from "@/types/actions";
 import type { Chat } from "@/types/chats";
 
 const CHAT_NOT_FOUND = "Chat not found";
+const FIRST_EXCHANGE_MESSAGE_COUNT = 2;
 
-export async function createChat(input: {
-  id: string;
-  title?: string;
-  notebookId?: string | null;
-}): Promise<ActionResult<Chat>> {
+export async function createChat(
+  input: CreateChatInput,
+): Promise<ActionResult<Chat>> {
   return runAction(createChatSchema, input, async (userId, data) => {
-    const existing = await db.chat.findUnique({
-      where: { id: data.id },
-      select: { ...CHAT_SELECT, userId: true },
-    });
-    if (existing) {
-      if (existing.userId !== userId) return fail(CHAT_NOT_FOUND);
-      return ok({
-        id: existing.id,
-        title: existing.title,
-        pinned: existing.pinned,
-        notebookId: existing.notebookId,
-      });
-    }
     if (data.notebookId) {
       const notebook = await db.notebook.findFirst({
         where: { id: data.notebookId, userId },
@@ -48,24 +42,38 @@ export async function createChat(input: {
       });
       if (!notebook) return fail("Notebook not found");
     }
-    const chat = await db.chat.create({
-      data: {
-        id: data.id,
-        userId,
-        title: data.title,
-        notebookId: data.notebookId ?? null,
-      },
-      select: CHAT_SELECT,
-    });
-    return ok(chat);
+    try {
+      const chat = await db.chat.create({
+        data: {
+          id: data.id,
+          userId,
+          title: data.title,
+          notebookId: data.notebookId ?? null,
+        },
+        select: CHAT_SELECT,
+      });
+      return ok(chat);
+    } catch (error) {
+      if (!hasErrorCode(error, UNIQUE_VIOLATION_CODE)) throw error;
+      const existing = await db.chat.findUnique({
+        where: { id: data.id },
+        select: { ...CHAT_SELECT, userId: true },
+      });
+      if (!existing || existing.userId !== userId) return fail(CHAT_NOT_FOUND);
+      return ok({
+        id: existing.id,
+        title: existing.title,
+        pinned: existing.pinned,
+        notebookId: existing.notebookId,
+      });
+    }
   });
 }
 
 /** Manual rename: locks the title against automatic renaming. */
-export async function renameChat(input: {
-  chatId: string;
-  title: string;
-}): Promise<ActionResult> {
+export async function renameChat(
+  input: RenameChatInput,
+): Promise<ActionResult> {
   return runAction(renameChatSchema, input, async (userId, data) => {
     const { count } = await db.chat.updateMany({
       where: { id: data.chatId, userId },
@@ -76,10 +84,9 @@ export async function renameChat(input: {
 }
 
 /** Sets a generated title; ignored once the user has renamed the chat. */
-export async function autoTitleChat(input: {
-  chatId: string;
-  title: string;
-}): Promise<ActionResult> {
+export async function autoTitleChat(
+  input: RenameChatInput,
+): Promise<ActionResult> {
   return runAction(renameChatSchema, input, async (userId, data) => {
     await db.chat.updateMany({
       where: { id: data.chatId, userId, isCustomTitle: false },
@@ -89,27 +96,22 @@ export async function autoTitleChat(input: {
   });
 }
 
-export async function togglePinChat(input: {
-  chatId: string;
-}): Promise<ActionResult> {
-  return runAction(chatIdSchema, input, async (userId, data) => {
-    const chat = await db.chat.findFirst({
+/** Sets the pinned flag to an explicit value, so repeated or concurrent calls cannot undo each other. */
+export async function setChatPinned(
+  input: SetChatPinnedInput,
+): Promise<ActionResult> {
+  return runAction(setChatPinnedSchema, input, async (userId, data) => {
+    const { count } = await db.chat.updateMany({
       where: { id: data.chatId, userId },
-      select: { pinned: true },
+      data: { pinned: data.pinned },
     });
-    if (!chat) return fail(CHAT_NOT_FOUND);
-    await db.chat.update({
-      where: { id: data.chatId },
-      data: { pinned: !chat.pinned },
-    });
-    return ok(null);
+    return count ? ok(null) : fail(CHAT_NOT_FOUND);
   });
 }
 
-export async function moveChatToNotebook(input: {
-  chatId: string;
-  notebookId: string | null;
-}): Promise<ActionResult> {
+export async function moveChatToNotebook(
+  input: MoveChatInput,
+): Promise<ActionResult> {
   return runAction(moveChatSchema, input, async (userId, data) => {
     if (data.notebookId) {
       const notebook = await db.notebook.findFirst({
@@ -126,33 +128,40 @@ export async function moveChatToNotebook(input: {
   });
 }
 
-export async function deleteChat(input: {
-  chatId: string;
-}): Promise<ActionResult> {
+export async function deleteChat(input: ChatIdInput): Promise<ActionResult> {
   return runAction(chatIdSchema, input, async (userId, data) => {
     await db.chat.deleteMany({ where: { id: data.chatId, userId } });
     return ok(null);
   });
 }
 
-/** Generates a short title from the first exchange; keeps the current title on any failure. */
-export async function generateChatTitle(input: {
-  chatId: string;
-}): Promise<ActionResult<{ title: string | null }>> {
+/**
+ * Generates a short title from the first exchange; keeps the current title on any failure.
+ * Only runs right after the first reply, so repeated calls cannot trigger more model requests.
+ */
+export async function generateChatTitle(
+  input: ChatIdInput,
+): Promise<ActionResult<{ title: string | null }>> {
   return runAction(chatIdSchema, input, async (userId, data) => {
-    if (!isAiEnabled()) return ok({ title: null });
+    if (!isAiEnabled() || isRateLimited(`title:${userId}`)) {
+      return ok({ title: null });
+    }
     const chat = await db.chat.findFirst({
       where: { id: data.chatId, userId, isCustomTitle: false },
       select: {
+        _count: { select: { messages: true } },
         messages: {
           orderBy: { createdAt: "asc" },
-          take: 2,
+          take: FIRST_EXCHANGE_MESSAGE_COUNT,
           select: { role: true, content: true },
         },
       },
     });
-    const userMessage = chat?.messages.find((m) => m.role === "USER");
-    const assistantMessage = chat?.messages.find((m) => m.role === "ASSISTANT");
+    if (chat?._count.messages !== FIRST_EXCHANGE_MESSAGE_COUNT) {
+      return ok({ title: null });
+    }
+    const userMessage = chat.messages.find((m) => m.role === "USER");
+    const assistantMessage = chat.messages.find((m) => m.role === "ASSISTANT");
     if (!userMessage || !assistantMessage) return ok({ title: null });
 
     try {
