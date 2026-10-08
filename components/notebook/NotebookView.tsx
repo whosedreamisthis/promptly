@@ -8,6 +8,8 @@ import ActionsMenu from "@/components/chat/ActionsMenu";
 import ChatInput from "@/components/chat/ChatInput";
 import { useChats } from "@/components/chat/ChatsProvider";
 import InlineRenameInput from "@/components/chat/InlineRenameInput";
+import NotebookNameForm from "@/components/notebook/NotebookNameForm";
+import { isUnnamedNotebook } from "@/lib/notebooks";
 import type { ChatSubmission } from "@/types/chats";
 
 interface NotebookViewProps {
@@ -22,6 +24,7 @@ export default function NotebookView({ notebookId }: NotebookViewProps) {
     sendMessage,
     moveChatToNotebook,
     renameChat,
+    renameNotebook,
     togglePinChat,
     deleteChat,
   } = useChats();
@@ -37,6 +40,14 @@ export default function NotebookView({ notebookId }: NotebookViewProps) {
   }
 
   const notebookChats = chats.filter((chat) => chat.notebookId === notebookId);
+
+  if (isUnnamedNotebook(notebook.title, notebookChats.length)) {
+    return (
+      <NotebookNameForm
+        onSubmit={(title) => renameNotebook(notebookId, title)}
+      />
+    );
+  }
 
   const handleSubmit = async (submission: ChatSubmission) => {
     const id = await sendMessage(crypto.randomUUID(), submission);
