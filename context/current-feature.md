@@ -35,3 +35,4 @@ Completed
 - **Code Scan and UI Review Fixes:** Adds rate limiting, atomic message saving, split chat contexts so streaming no longer re-renders the sidebar, shared menu components and accessibility fixes; key files `app/api/chat/route.ts`, `components/chat/ChatsProvider.tsx`, `lib/rate-limit.ts`.
 - **Guest Chat:** Lets signed-out users chat in memory without saving, with a sign-in notice above the chat box and a sign-in dialog for New notebook; key files `app/api/chat/route.ts`, `components/chat/ChatsProvider.tsx`, `components/sidebar/SignInRequiredModal.tsx`.
 - **Usage Limits:** Moves chat rate limits to Upstash Redis with per-minute, daily and global limits that switch replies to a sample reply; key files `lib/chat-limits.ts`, `lib/rate-limit.ts`, `app/api/chat/route.ts`.
+- **Model Fallback:** Streams a sample reply when the model fails or returns nothing, such as when its quota is used up; key files `lib/ai.ts`, `app/api/chat/route.ts`.
