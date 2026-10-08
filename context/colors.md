@@ -1,6 +1,6 @@
 # Chatbot Color Palette & Style Guide
 
-To achieve a modern, vibrant look that avoids plain black, stark white, or typical dark modes, this palette centers around **mid-tone blues**, **soft oceanic shades**, and **cool slate backgrounds**. It balances professional elegance with an inviting, accessible user experience.
+To give your chatbot an inviting, calm, and approachable aesthetic, this palette focuses on a **range of harmonious pastels**. It avoids stark pure whites and heavy dark modes, opting instead for creamy off-whites, soft mints, muted lavender, warm blush accents, and gentle sage tones.
 
 ---
 
@@ -8,28 +8,30 @@ To achieve a modern, vibrant look that avoids plain black, stark white, or typic
 
 ### Primary Brand & Accents
 
-- **Primary Accent (Indigo/Ocean Blue):** `#3B82F6` (Tailwind `blue-500`)
-  - _Usage:_ Primary call-to-action buttons, active navigation states, user speech bubbles, interactive toggles.
-- **Secondary Accent (Cyan/Electric Sky):** `#0EA5E9` (Tailwind `sky-500`)
-  - _Usage:_ Hover states, glowing stream indicators, AI typing indicators, key highlight text.
-- **Subtle Highlight (Ice Blue):** `#E0F2FE` (Tailwind `sky-100`)
-  - _Usage:_ Active thread highlights in the sidebar, badge backgrounds, tag borders.
+- **Primary Accent (Soft Sage / Mint):** `#A7F3D0` (Tailwind `emerald-200`)
+  - _Usage:_ Primary action buttons, active toggles, key CTA highlights.
+- **Secondary Accent (Lavender Mist):** `#DDD6FE` (Tailwind `violet-200`)
+  - _Usage:_ AI status badges, streaming glow indicators, secondary highlights.
+- **Warm Highlight (Blush Rose):** `#FBCFE8` (Tailwind `pink-200`)
+  - _Usage:_ Notifications, favorite icons, warm user highlights.
+- **Soft Alert / Accent (Peach Cream):** `#FED7AA` (Tailwind `orange-200`)
+  - _Usage:_ System tags, warning toasts, interactive hover states.
 
-### Mid-Tone Backgrounds (Non-Black / Non-White)
+### Background Canvas & Surfaces (Warm Pastel Tones)
 
-- **Main Canvas (Cool Slate Blue):** `#0F172A` (Tailwind `slate-900`)
-  - _Usage:_ Main chat window background. Deep blue tint instead of harsh pitch black.
-- **Surface / Container (Deep Blue-Grey):** `#1E293B` (Tailwind `slate-800`)
-  - _Usage:_ Chat message bubbles (AI response), modal dialogs, top headers, dropdown menus.
-- **Sidebar Surface (Midnight Navy):** `#1E1B4B` (Tailwind `indigo-950`)
-  - _Usage:_ Collapsible sidebar background to establish clear visual depth between navigation and content.
+- **Main Canvas (Soft Cream / Warm Parchment):** `#FDFBF7`
+  - _Usage:_ Main chat window canvas. Provides a soft, non-glare warm foundation.
+- **Surface / Container (Warm Vanilla):** `#F5F0E6`
+  - _Usage:_ AI response bubbles, popover cards, top navigation header.
+- **Sidebar Surface (Pale Lavender Tint):** `#F3F0F8`
+  - _Usage:_ Collapsible navigation sidebar to softly separate history from the chat canvas.
 
-### Text & Messaging Contrast
+### Text & Readable Contrast
 
-- **Primary Text (Cool Off-White):** `#F8FAFC` (Tailwind `slate-50`)
-  - _Usage:_ Main headings, user query text, primary reading content.
-- **Muted Text (Soft Steel):** `#94A3B8` (Tailwind `slate-400`)
-  - _Usage:_ Timestamps, secondary subtitles, model details, search placeholders.
+- **Primary Text (Deep Slate Cocoa):** `#292524` (Tailwind `stone-800`)
+  - _Usage:_ Main body text, speech bubble content, headings. Soft and easy on the eyes.
+- **Muted Text (Soft Taupe):** `#78716C` (Tailwind `stone-500`)
+  - _Usage:_ Timestamps, search placeholders, secondary metadata.
 
 ---
 
@@ -38,32 +40,33 @@ To achieve a modern, vibrant look that avoids plain black, stark white, or typic
 ### A. Speech Bubbles
 
 - **User Messages:**
-  - Background: `#2563EB` (Gradient to `#3B82F6`)
-  - Text: `#FFFFFF`
+  - Background: `#DDD6FE` (Soft Lavender)
+  - Text: `#292524` (Deep Slate Cocoa)
   - Alignment: Right-aligned
 - **AI Responses:**
-  - Background: `#1E293B` (Border: `1px solid #334155`)
-  - Text: `#F8FAFC`
+  - Background: `#F5F0E6` (Warm Vanilla)
+  - Border: `1px solid #E7E0D3`
+  - Text: `#292524`
   - Alignment: Left-aligned
 
 ### B. Sidebar & Navigation
 
-- **Background:** `#1E1B4B` (Deep Midnight Navy)
-- **Active Thread Item:** Background `#312E81` with a left border accent of `#3B82F6`
-- **Inactive Thread Hover:** Background `#2E1065` / `rgba(255, 255, 255, 0.05)`
+- **Background:** `#F3F0F8` (Pale Lavender Tint)
+- **Active Thread Item:** Background `#E9E3F3` with a left border accent of `#A7F3D0` (Mint)
+- **Inactive Thread Hover:** Background `#EFE8F6`
 
 ### C. Input Bar & Controls
 
 - **Chat Input Container:**
-  - Background: `#1E293B`
-  - Border: `#334155` (Focus border: `#3B82F6` with subtle blue glow ring)
-  - Placeholder: `#64748B`
+  - Background: `#FFFFFF`
+  - Border: `1px solid #E7E0D3` (Focus border: `#A7F3D0` with a subtle pastel ring glow)
+  - Placeholder: `#9E9893`
 
 ---
 
 ## 3. Tailwind CSS Config Implementation
 
-If you are using Tailwind CSS, you can extend your theme configuration with these exact variables:
+If you are using Tailwind CSS, you can extend your theme configuration with these exact pastel variables:
 
 ```javascript
 // tailwind.config.js
@@ -71,18 +74,21 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        brand: {
-          50: "#f0f9ff",
-          100: "#e0f2fe",
-          500: "#3b82f6", // Main Action
-          600: "#2563eb", // Hover
-          700: "#1d4ed8",
+        pastel: {
+          mint: "#A7F3D0",
+          lavender: "#DDD6FE",
+          blush: "#FBCFE8",
+          peach: "#FED7AA",
         },
         surface: {
-          canvas: "#0f172a", // Main Background
-          card: "#1e293b", // Component / Message Cards
-          sidebar: "#1e1b4b", // Navigation Panel
-          border: "#334155", // Borders & Dividers
+          canvas: "#FDFBF7", // Main Warm Canvas
+          card: "#F5F0E6", // Response Containers & Cards
+          sidebar: "#F3F0F8", // Navigation Sidebar
+          border: "#E7E0D3", // Soft Divider Lines
+        },
+        ink: {
+          primary: "#292524", // Body Text
+          muted: "#78716C", // Metadata & Timestamps
         },
       },
     },
@@ -94,6 +100,6 @@ module.exports = {
 
 ## 4. Design Guidelines & Tips
 
-1. **Gradients for AI Polish:** Use subtle linear gradients for AI accents (e.g., `from-sky-500 to-blue-600`) on icons, streaming indicators, or primary CTA buttons to give the UI a living, modern AI look.
-2. **Readability First:** Keep text contrast high by using `#F8FAFC` on all slate backgrounds. Avoid using grey text on dark blue containers unless it's for secondary meta-data like timestamps.
-3. **Borders over Shadows:** On tinted mid-tone backgrounds, standard drop-shadows are hard to see. Use subtle 1px borders (`#334155` or `rgba(255,255,255,0.1)`) to elevate cards and floating menus.
+1. **Soft Gradients:** Use gentle pastel gradients (e.g., `from-violet-200 via-pink-200 to-emerald-200`) for headers, avatars, or decorative borders to add a cozy, modern touch.
+2. **High Contrast Text:** Since pastel backgrounds are light, ensure all text uses dark cocoa/stone ink (`#292524`) rather than light gray to maintain WCAG accessibility standards.
+3. **Subtle Shadows:** Use light, warm box-shadows (e.g., `box-shadow: 0 4px 20px -2px rgba(41, 37, 36, 0.05)`) to elevate cards gracefully off the canvas.

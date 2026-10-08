@@ -6,7 +6,7 @@ const BUTTON_CLASS =
 
 export default function NavBar() {
   return (
-    <header className="flex h-16 items-center justify-between border-b border-black/[.08] px-6 dark:border-white/[.145]">
+    <header className="flex h-16 items-center justify-between border-b border-white/60 bg-white/40 px-6 backdrop-blur-md">
       <Link href="/" className="text-lg font-semibold">
         Promptly
       </Link>
@@ -14,13 +14,13 @@ export default function NavBar() {
         <Show when="signed-out">
           <Link
             href="/sign-in"
-            className={`${BUTTON_CLASS} hover:bg-black/[.04] dark:hover:bg-[#1a1a1a]`}
+            className={`${BUTTON_CLASS} hover:bg-pastel-peach`}
           >
             Sign in
           </Link>
           <Link
             href="/register"
-            className={`${BUTTON_CLASS} bg-foreground text-background hover:bg-[#383838] dark:hover:bg-[#ccc]`}
+            className={`${BUTTON_CLASS} bg-pastel-mint text-foreground hover:bg-pastel-lavender`}
           >
             Register
           </Link>

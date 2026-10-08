@@ -40,7 +40,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           signUpUrl="/register"
           localization={CLERK_LOCALIZATION}
         >
-          <Suspense fallback={<div className="h-16 border-b" />}>
+          <Suspense fallback={<div className="h-16 border-b border-white/60 bg-white/40" />}>
             <NavBar />
           </Suspense>
           {children}
