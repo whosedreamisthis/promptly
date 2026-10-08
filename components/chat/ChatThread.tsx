@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { FileText } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 export interface ChatMessage {
   id: string;
@@ -33,12 +34,14 @@ export default function ChatThread({ messages }: ChatThreadProps) {
             {message.fileNames.length > 0 && (
               <ul className="flex flex-wrap justify-end gap-2">
                 {message.fileNames.map((name, index) => (
-                  <li
-                    key={`${name}-${index}`}
-                    className="flex items-center gap-2 rounded-md border border-surface-border bg-white px-2 py-1 text-sm"
-                  >
-                    <FileText className="h-4 w-4 text-stone-500" />
-                    {name}
+                  <li key={`${name}-${index}`}>
+                    <Badge
+                      variant="outline"
+                      className="h-auto gap-2 rounded-md bg-white px-2 py-1 text-sm font-normal"
+                    >
+                      <FileText className="text-muted-foreground" />
+                      {name}
+                    </Badge>
                   </li>
                 ))}
               </ul>

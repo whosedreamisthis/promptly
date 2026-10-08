@@ -1,7 +1,12 @@
 "use client";
 
-import { useState } from "react";
 import { ChevronDown } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 interface SidebarSectionProps {
   title: string;
@@ -12,24 +17,20 @@ export default function SidebarSection({
   title,
   children,
 }: SidebarSectionProps) {
-  const [expanded, setExpanded] = useState(true);
-
   return (
-    <section className="pb-2">
-      <button
-        type="button"
-        aria-expanded={expanded}
-        onClick={() => setExpanded((prev) => !prev)}
-        className="flex w-full items-center gap-1 rounded-md px-2 py-2 text-sm text-stone-500 transition-colors hover:bg-[#EFE8F6]"
-      >
-        {title}
-        <ChevronDown
-          className={`h-4 w-4 transition-transform ${
-            expanded ? "" : "-rotate-90"
-          }`}
-        />
-      </button>
-      {expanded && children}
-    </section>
+    <Collapsible defaultOpen asChild>
+      <section className="pb-2">
+        <CollapsibleTrigger asChild>
+          <Button
+            variant="ghost"
+            className="group h-9 w-full justify-start gap-1 px-2 font-normal text-muted-foreground aria-expanded:bg-transparent aria-expanded:hover:bg-accent"
+          >
+            {title}
+            <ChevronDown className="transition-transform group-data-[state=closed]:-rotate-90" />
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent>{children}</CollapsibleContent>
+      </section>
+    </Collapsible>
   );
 }

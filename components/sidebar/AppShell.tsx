@@ -4,6 +4,7 @@ import { Suspense, useState } from "react";
 import { Show, UserButton } from "@clerk/nextjs";
 import { Menu } from "lucide-react";
 import { USER_MENU_POPOVER_CLASS } from "@/lib/clerk-appearance";
+import { Button } from "@/components/ui/button";
 import RoutedSidebar from "@/components/sidebar/RoutedSidebar";
 
 interface AppShellProps {
@@ -25,6 +26,13 @@ export default function AppShell({ navbar, children }: AppShellProps) {
     setMobileOpen(false);
   };
 
+  // On desktop the sidebar overlays the page, so clicking the page dismisses it.
+  const handleMainAreaClick = () => {
+    if (!closed && window.matchMedia("(min-width: 768px)").matches) {
+      handleClose();
+    }
+  };
+
   return (
     <div className="flex h-full">
       <Suspense fallback={null}>
@@ -34,21 +42,24 @@ export default function AppShell({ navbar, children }: AppShellProps) {
           onClose={handleClose}
         />
       </Suspense>
-      <div className="relative flex min-w-0 flex-1 flex-col">
+      <div
+        className="relative flex min-w-0 flex-1 flex-col"
+        onClick={handleMainAreaClick}
+      >
         {navbar}
         <div
           className={`absolute left-3 top-3.5 z-10 items-center gap-2 ${
             closed ? "flex" : "flex md:hidden"
           }`}
         >
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="icon"
             aria-label="Open sidebar"
             onClick={handleOpen}
-            className="flex h-9 w-9 items-center justify-center rounded-md transition-colors hover:bg-pastel-lavender focus-visible:outline-2 focus-visible:outline-pastel-mint"
           >
-            <Menu className="h-5 w-5" />
-          </button>
+            <Menu className="size-5" />
+          </Button>
           <span className="text-lg font-semibold">Promptly</span>
         </div>
         <Show when="signed-in">

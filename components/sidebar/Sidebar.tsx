@@ -19,9 +19,15 @@ import {
   X,
 } from "lucide-react";
 import Logo from "@/components/layout/Logo";
+import { Button } from "@/components/ui/button";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group";
 import SettingsModal from "@/components/sidebar/SettingsModal";
 import { USER_MENU_POPOVER_CLASS } from "@/lib/clerk-appearance";
-import type { MenuAction } from "@/components/sidebar/ItemMenu";
+import type { MenuAction } from "@/components/sidebar/SidebarItem";
 import SidebarItem from "@/components/sidebar/SidebarItem";
 import SidebarSection from "@/components/sidebar/SidebarSection";
 import { MOCK_NOTEBOOKS, type Chat, type Notebook } from "@/lib/mock-chats";
@@ -42,9 +48,6 @@ interface SidebarProps {
 function pinnedFirst<T extends { pinned?: boolean }>(items: T[]): T[] {
   return [...items].sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned));
 }
-
-const ICON_BUTTON =
-  "flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors hover:bg-[#EFE8F6] focus-visible:outline-2 focus-visible:outline-pastel-mint";
 
 export default function Sidebar({
   chats,
@@ -200,14 +203,14 @@ export default function Sidebar({
             <Logo className="h-7 w-7 shrink-0" />
             <span className="truncate text-lg font-semibold">Promptly</span>
           </div>
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="icon"
             aria-label="Close sidebar"
             onClick={onClose}
-            className={ICON_BUTTON}
           >
-            <X className="h-5 w-5" />
-          </button>
+            <X className="size-5" />
+          </Button>
         </div>
 
         <div
@@ -215,29 +218,30 @@ export default function Sidebar({
             scrolled ? "border-surface-border" : "border-transparent"
           }`}
         >
-          <label className="flex h-9 items-center gap-2 rounded-md border border-surface-border bg-white px-3 focus-within:border-pastel-mint focus-within:ring-2 focus-within:ring-pastel-mint/50">
-            <Search className="h-4 w-4 shrink-0 text-stone-500" />
-            <input
+          <InputGroup className="h-9 bg-white">
+            <InputGroupAddon>
+              <Search />
+            </InputGroupAddon>
+            <InputGroupInput
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search chats..."
               aria-label="Search chats"
-              className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[#9E9893]"
             />
-          </label>
-          <button
-            type="button"
+          </InputGroup>
+          <Button
+            variant="ghost"
+            className="h-9 justify-start gap-3 px-2 font-normal"
             onClick={() => {
               setActiveNotebookId(null);
               onNewChat();
               onClose();
             }}
-            className="flex h-9 items-center gap-3 rounded-md px-2 text-sm transition-colors hover:bg-[#EFE8F6]"
           >
-            <SquarePen className="h-5 w-5 shrink-0" />
+            <SquarePen className="size-5" />
             New chat
-          </button>
+          </Button>
         </div>
 
         <nav
@@ -246,14 +250,14 @@ export default function Sidebar({
           className="min-h-0 flex-1 overflow-y-auto px-3"
         >
           <SidebarSection title="Notebooks">
-            <button
-              type="button"
+            <Button
+              variant="ghost"
+              className="h-10 w-full justify-start gap-3 rounded-full pl-3 font-normal"
               onClick={handleNewNotebook}
-              className="flex h-10 w-full items-center gap-3 rounded-full pl-3 text-left text-sm transition-colors hover:bg-[#EFE8F6]"
             >
-              <Plus className="h-5 w-5 shrink-0" />
+              <Plus className="size-5" />
               New notebook
-            </button>
+            </Button>
             {pinnedFirst(notebooks).map((notebook) => (
               <SidebarItem
                 key={notebook.id}
@@ -324,17 +328,17 @@ export default function Sidebar({
             </span>
             <p className="min-w-0 flex-1 truncate text-sm font-medium">Guest</p>
           </Show>
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="icon"
             aria-label="Settings"
             onClick={() => setSettingsOpen(true)}
-            className={ICON_BUTTON}
           >
-            <Settings className="h-5 w-5" />
-          </button>
+            <Settings className="size-5" />
+          </Button>
         </div>
       </aside>
-      {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
+      <SettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} />
     </>
   );
 }

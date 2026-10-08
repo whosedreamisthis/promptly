@@ -67,7 +67,9 @@ Example v4 configuration:
 ## Styling
 
 - Tailwind CSS for all styling
-- Use shadcn/ui components where applicable
+- Use shadcn/ui for all basic UI components (Button, Input, Textarea, Dialog, DropdownMenu, Collapsible, Badge, etc.); do not hand-build them with raw HTML elements and Tailwind classes
+- Add shadcn components with `npx shadcn@latest add <component>` (check the generated files import `cn` from `@/lib/utils`)
+- Only write a custom component when shadcn has no equivalent, and compose it from shadcn components where possible
 - No inline styles
 - Buttons (including links styled as buttons) always use `rounded-md`
 - Dark mode first, light mode as option

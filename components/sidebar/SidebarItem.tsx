@@ -1,8 +1,26 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { MoreVertical, Pin } from "lucide-react";
-import ItemMenu, { type MenuAction } from "@/components/sidebar/ItemMenu";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+export interface MenuAction {
+  label: string;
+  icon: React.ReactNode;
+  onSelect?: () => void;
+  danger?: boolean;
+  children?: MenuAction[];
+}
 
 interface SidebarItemProps {
   icon: React.ReactNode;
@@ -16,6 +34,38 @@ interface SidebarItemProps {
   onCancelRename: () => void;
 }
 
+function MenuItems({ actions }: { actions: MenuAction[] }) {
+  return actions.map((action) => {
+    if (action.children) {
+      return (
+        <DropdownMenuSub key={action.label}>
+          <DropdownMenuSubTrigger>
+            {action.icon}
+            {action.label}
+          </DropdownMenuSubTrigger>
+          <DropdownMenuSubContent className="w-52">
+            {action.children.length === 0 ? (
+              <DropdownMenuItem disabled>Nothing here yet</DropdownMenuItem>
+            ) : (
+              <MenuItems actions={action.children} />
+            )}
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
+      );
+    }
+    return (
+      <DropdownMenuItem
+        key={action.label}
+        variant={action.danger ? "destructive" : "default"}
+        onSelect={() => action.onSelect?.()}
+      >
+        {action.icon}
+        {action.label}
+      </DropdownMenuItem>
+    );
+  });
+}
+
 export default function SidebarItem({
   icon,
   label,
@@ -27,9 +77,12 @@ export default function SidebarItem({
   onRename,
   onCancelRename,
 }: SidebarItemProps) {
-  const [anchor, setAnchor] = useState<DOMRect | null>(null);
   const settled = useRef(false);
-  const triggerRef = useRef<HTMLButtonElement>(null);
+  const renamingRef = useRef(renaming);
+
+  useEffect(() => {
+    renamingRef.current = renaming;
+  }, [renaming]);
 
   const finishRename = (value: string) => {
     if (settled.current) return;
@@ -38,8 +91,6 @@ export default function SidebarItem({
     if (title && title !== label) onRename(title);
     else onCancelRename();
   };
-
-  const menuOpen = anchor !== null;
 
   return (
     <div
@@ -50,7 +101,7 @@ export default function SidebarItem({
       {renaming ? (
         <div className="flex h-full min-w-0 flex-1 items-center gap-3 pl-3">
           <span className="shrink-0">{icon}</span>
-          <input
+          <Input
             autoFocus
             defaultValue={label}
             aria-label="Rename"
@@ -67,51 +118,48 @@ export default function SidebarItem({
                 onCancelRename();
               }
             }}
-            className="min-w-0 flex-1 rounded-md border border-pastel-mint bg-white px-2 py-1 text-sm outline-none"
+            className="h-7 min-w-0 flex-1 bg-white"
           />
         </div>
       ) : (
-        <button
-          type="button"
+        <Button
+          variant="ghost"
           onClick={onSelect}
           aria-current={active ? "true" : undefined}
-          className={`flex h-full min-w-0 flex-1 items-center gap-3 rounded-full pl-3 text-left text-sm ${
-            active ? "font-semibold" : ""
+          className={`h-full min-w-0 flex-1 justify-start gap-3 rounded-full pl-3 text-left hover:bg-transparent ${
+            active ? "font-semibold" : "font-normal"
           }`}
         >
           <span className="shrink-0">{icon}</span>
           <span className="truncate">{label}</span>
-        </button>
+        </Button>
       )}
       {pinned && !renaming && (
         <Pin aria-label="Pinned" className="mr-1 h-4 w-4 shrink-0" />
       )}
       {!renaming && (
-        <button
-          ref={triggerRef}
-          type="button"
-          aria-label={`Options for ${label}`}
-          aria-haspopup="menu"
-          aria-expanded={menuOpen}
-          onClick={(event) =>
-            setAnchor(
-              menuOpen ? null : event.currentTarget.getBoundingClientRect(),
-            )
-          }
-          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full hover:bg-black/5 focus-visible:opacity-100 ${
-            menuOpen ? "" : "opacity-0 group-hover:opacity-100"
-          }`}
-        >
-          <MoreVertical className="h-4 w-4" />
-        </button>
-      )}
-      {anchor && (
-        <ItemMenu
-          anchor={anchor}
-          triggerRef={triggerRef}
-          actions={actions}
-          onClose={() => setAnchor(null)}
-        />
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={`Options for ${label}`}
+              className="rounded-full opacity-0 group-hover:opacity-100 focus-visible:opacity-100 aria-expanded:opacity-100"
+            >
+              <MoreVertical />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="end"
+            className="w-52"
+            onCloseAutoFocus={(event) => {
+              // Keep focus on the rename field instead of returning it to the trigger.
+              if (renamingRef.current) event.preventDefault();
+            }}
+          >
+            <MenuItems actions={actions} />
+          </DropdownMenuContent>
+        </DropdownMenu>
       )}
     </div>
   );

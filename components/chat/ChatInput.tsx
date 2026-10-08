@@ -2,6 +2,15 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ArrowUp, FileText, Mic, Plus, X } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupTextarea,
+} from "@/components/ui/input-group";
 import { ACCEPT_ATTRIBUTE, isAcceptedFile } from "@/lib/chat-files";
 import { useSpeechRecognition } from "@/lib/use-speech-recognition";
 
@@ -14,9 +23,6 @@ interface ChatInputProps {
   disabled: boolean;
   onSubmit: (submission: ChatSubmission) => void;
 }
-
-const ICON_BUTTON =
-  "flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors hover:bg-[#EFE8F6] focus-visible:outline-2 focus-visible:outline-pastel-mint disabled:cursor-default disabled:opacity-50";
 
 export default function ChatInput({ disabled, onSubmit }: ChatInputProps) {
   const [text, setText] = useState("");
@@ -86,53 +92,54 @@ export default function ChatInput({ disabled, onSubmit }: ChatInputProps) {
       {files.length > 0 && (
         <ul className="mb-2 flex flex-wrap gap-2" aria-label="Attached files">
           {files.map((file, index) => (
-            <li
-              key={`${file.name}-${index}`}
-              className="flex max-w-full items-center gap-2 rounded-md border border-surface-border bg-white py-1 pl-2 pr-1 text-sm"
-            >
-              <FileText className="h-4 w-4 shrink-0 text-stone-500" />
-              <span className="truncate">{file.name}</span>
-              <button
-                type="button"
-                aria-label={`Remove ${file.name}`}
-                onClick={() => removeFile(index)}
-                className="flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-md hover:bg-pastel-lavender"
+            <li key={`${file.name}-${index}`} className="max-w-full">
+              <Badge
+                variant="outline"
+                className="h-auto max-w-full gap-2 rounded-md bg-white py-1 pl-2 pr-1 text-sm font-normal"
               >
-                <X className="h-4 w-4" />
-              </button>
+                <FileText className="text-muted-foreground" />
+                <span className="truncate">{file.name}</span>
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  aria-label={`Remove ${file.name}`}
+                  onClick={() => removeFile(index)}
+                >
+                  <X />
+                </Button>
+              </Badge>
             </li>
           ))}
         </ul>
       )}
-      <div
-        className={`flex items-end gap-1 rounded-lg border bg-white p-2 shadow-[0_4px_20px_-2px_rgba(41,37,36,0.05)] transition-colors focus-within:border-pastel-mint focus-within:ring-2 focus-within:ring-pastel-mint/50 ${
-          dragging
-            ? "border-pastel-mint ring-2 ring-pastel-mint/50"
-            : "border-surface-border"
+      <Input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        accept={ACCEPT_ATTRIBUTE}
+        className="hidden"
+        tabIndex={-1}
+        onChange={(event) => {
+          if (event.target.files) addFiles(event.target.files);
+          event.target.value = "";
+        }}
+      />
+      <InputGroup
+        className={`h-auto rounded-lg bg-white p-1 shadow-[0_4px_20px_-2px_rgba(41,37,36,0.05)] ${
+          dragging ? "border-ring ring-2 ring-ring/50" : ""
         }`}
       >
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          accept={ACCEPT_ATTRIBUTE}
-          className="hidden"
-          tabIndex={-1}
-          onChange={(event) => {
-            if (event.target.files) addFiles(event.target.files);
-            event.target.value = "";
-          }}
-        />
-        <button
-          type="button"
-          aria-label="Attach files"
-          disabled={disabled}
-          onClick={() => fileInputRef.current?.click()}
-          className={ICON_BUTTON}
-        >
-          <Plus className="h-5 w-5" />
-        </button>
-        <textarea
+        <InputGroupAddon align="inline-start" className="self-end pb-0.5">
+          <InputGroupButton
+            size="icon-sm"
+            aria-label="Attach files"
+            disabled={disabled}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <Plus className="size-5" />
+          </InputGroupButton>
+        </InputGroupAddon>
+        <InputGroupTextarea
           ref={textareaRef}
           rows={1}
           value={text}
@@ -146,34 +153,37 @@ export default function ChatInput({ disabled, onSubmit }: ChatInputProps) {
               submit();
             }
           }}
-          className="max-h-32 min-h-9 min-w-0 flex-1 resize-none self-center bg-transparent px-2 py-1.5 text-base outline-none placeholder:text-[#9E9893]"
+          className="max-h-32 min-h-9 px-2 py-1.5 text-base"
         />
-        {supported && (
-          <button
-            type="button"
-            aria-label={listening ? "Stop dictation" : "Start dictation"}
-            aria-pressed={listening}
-            disabled={disabled}
-            onClick={toggle}
-            className={`${ICON_BUTTON} ${
-              listening ? "animate-pulse bg-red-100 ring-2 ring-red-400" : ""
-            }`}
-          >
-            <Mic className="h-5 w-5" />
-          </button>
-        )}
-        {(text.trim() !== "" || files.length > 0) && (
-          <button
-            type="button"
-            aria-label="Send message"
-            disabled={!canSend}
-            onClick={submit}
-            className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-md bg-pastel-mint transition-colors hover:bg-pastel-lavender focus-visible:outline-2 focus-visible:outline-pastel-mint disabled:cursor-default disabled:opacity-50"
-          >
-            <ArrowUp className="h-5 w-5" />
-          </button>
-        )}
-      </div>
+        <InputGroupAddon align="inline-end" className="gap-1 self-end pb-0.5">
+          {supported && (
+            <InputGroupButton
+              size="icon-sm"
+              aria-label={listening ? "Stop dictation" : "Start dictation"}
+              aria-pressed={listening}
+              disabled={disabled}
+              onClick={toggle}
+              className={
+                listening ? "animate-pulse bg-red-100 ring-2 ring-red-400" : ""
+              }
+            >
+              <Mic className="size-5" />
+            </InputGroupButton>
+          )}
+          {(text.trim() !== "" || files.length > 0) && (
+            <InputGroupButton
+              size="icon-sm"
+              variant="default"
+              aria-label="Send message"
+              disabled={!canSend}
+              onClick={submit}
+              className="hover:bg-secondary"
+            >
+              <ArrowUp className="size-5" />
+            </InputGroupButton>
+          )}
+        </InputGroupAddon>
+      </InputGroup>
     </div>
   );
 }

@@ -8,6 +8,14 @@
 - Don't add features not in the project spec
 - Never delete files without clarification
 
+## UI Components
+
+- Use shadcn/ui for all basic UI components (buttons, inputs, textareas, dialogs, dropdown menus, collapsibles, badges, tooltips, etc.). Do not hand-build these with raw HTML elements and Tailwind classes
+- Before writing any UI, check whether shadcn has a component for it; add missing ones with the shadcn CLI (`npx shadcn@latest add <component>`), never by hand-copying
+- Only build a custom component when shadcn has no equivalent, and compose it from shadcn components where possible
+- Style shadcn components through the theme variables in `app/globals.css`, not one-off overrides
+- Clerk components (`UserButton`, `Show`, etc.) are the exception and stay as they are
+
 ## Workflow
 
 This is the common workflow that we will use for every single feature/fix:
