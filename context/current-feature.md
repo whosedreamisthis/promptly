@@ -1,27 +1,20 @@
-# Current Feature: Database Seed
+# Current Feature
 
-Database Seed: seed development data from `context/features/seed-spec.md`.
+<!-- Feature name and short description -->
 
 ## Status
 
 <!-- Not Started | In Progress | Completed -->
 
-In Progress
+Completed
 
 ## Goals
 
 <!-- Goals and requirements -->
 
-- Seed 5 notebooks, 20 chats and 82 messages for the target user
-- Re-runnable without duplicates
-- Refuse to run against anything but the development database
-
 ## Notes
 
 <!-- Any extra notes -->
-
-- Development Neon branch only, never `production`
-- See `seed-spec.md` for data, files and the safety guard
 
 ## Completed Features
 
@@ -37,3 +30,4 @@ In Progress
 - **Notebook Pages:** Adds `/notebooks/[notebookId]` pages opened from the sidebar, with a past chats list, a chat input and a breadcrumb back from notebook chats; key files `components/notebook/NotebookView.tsx`, `components/sidebar/RoutedSidebar.tsx`, `components/chat/ChatView.tsx`.
 - **Database Error Handling:** Retries the chats query when Neon is unreachable and shows a branded error page instead of crashing; key files `lib/chats-data.ts`, `app/global-error.tsx`.
 - **Message Persistence:** Saves user messages and replies to the database and loads them on chat pages, with a 10,000 character limit; key files `actions/messages.ts`, `lib/validations/messages.ts`, `components/chat/ChatsProvider.tsx`.
+- **Database Seed:** Adds an idempotent `npm run db:seed` that fills the development database with 5 notebooks, 20 chats and 82 messages; key files `prisma/seed.ts`, `prisma/seed-data.ts`, `context/features/seed-spec.md`.
