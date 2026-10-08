@@ -20,6 +20,7 @@ import {
 import { useChatMessages } from "@/components/chat/useChatMessages";
 import { useNotebooks } from "@/components/chat/useNotebooks";
 import { persist } from "@/lib/persist";
+import { MAX_GUEST_HISTORY } from "@/lib/validations/messages";
 import { useLatest } from "@/lib/use-latest";
 import {
   NEW_CHAT_TITLE,
@@ -56,6 +57,9 @@ interface ChatsActions {
 interface ChatsContextValue extends ChatsActions {
   chats: Chat[];
   notebooks: Notebook[];
+  isGuest: boolean;
+  /** Id of the in-memory chat a signed-out user is in. */
+  guestChatId: string;
 }
 
 interface MessagesContextValue {
@@ -89,14 +93,18 @@ function titleFor({ text, files }: ChatSubmission): string {
 
 interface ChatsProviderProps {
   initialData: ChatsData;
+  /** Signed-out users chat in memory only; nothing is saved. */
+  isGuest: boolean;
   children: React.ReactNode;
 }
 
 export default function ChatsProvider({
   initialData,
+  isGuest,
   children,
 }: ChatsProviderProps) {
   const [chats, setChats] = useState<Chat[]>(initialData.chats);
+  const [guestChatId, setGuestChatId] = useState(() => crypto.randomUUID());
   const chatsRef = useLatest(chats);
 
   const updateChat = useCallback((id: string, changes: Partial<Chat>) => {
@@ -152,6 +160,12 @@ export default function ChatsProvider({
       (messagesRef.current[id] ?? []).length === 0;
 
     const createChat = async () => {
+      if (isGuest) {
+        messageActions.stopStreaming(guestChatId);
+        messageActions.removeMessages(guestChatId);
+        setGuestChatId(crypto.randomUUID());
+        return null;
+      }
       const [newest] = chatsRef.current;
       if (newest?.title === NEW_CHAT_TITLE && hasNoMessages(newest.id)) {
         return newest.id;
@@ -168,6 +182,30 @@ export default function ChatsProvider({
       if (!submission.text) {
         toast.error("Type a message to send with your files");
         return null;
+      }
+      if (isGuest) {
+        const history = (messagesRef.current[guestChatId] ?? [])
+          .filter((message) => message.text)
+          .slice(-MAX_GUEST_HISTORY)
+          .map((message) => ({
+            role: message.role === "user" ? ("USER" as const) : ("ASSISTANT" as const),
+            content: message.text,
+          }));
+        const messageId = crypto.randomUUID();
+        messageActions.addMessage(guestChatId, {
+          id: messageId,
+          role: "user",
+          text: submission.text,
+          fileNames: submission.files.map((file) => file.name),
+        });
+        void messageActions.streamReply(
+          guestChatId,
+          messageId,
+          submission.text,
+          false,
+          history,
+        );
+        return guestChatId;
       }
       const existing = chatsRef.current.find((chat) => chat.id === id);
       const title = titleFor(submission);
@@ -237,12 +275,14 @@ export default function ChatsProvider({
       deleteChat,
       moveChatToNotebook,
     };
-  }, [chatsRef, messagesRef, messageActions, updateChat]);
+  }, [chatsRef, messagesRef, messageActions, updateChat, isGuest, guestChatId]);
 
   const chatsValue = useMemo<ChatsContextValue>(
     () => ({
       chats,
       notebooks,
+      isGuest,
+      guestChatId,
       ...chatActions,
       createNotebook,
       renameNotebook,
@@ -252,6 +292,8 @@ export default function ChatsProvider({
     [
       chats,
       notebooks,
+      isGuest,
+      guestChatId,
       chatActions,
       createNotebook,
       renameNotebook,

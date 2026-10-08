@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import {
   getModel,
   HISTORY_LIMIT,
+  type HistoryMessage,
   isAiEnabled,
   mockReplyStream,
   MAX_OUTPUT_TOKENS,
@@ -19,11 +20,41 @@ import {
 export const maxDuration = 60;
 
 const GENERIC_ERROR = "Something went wrong. Please try again.";
-/** Generous cap for a 10,000 character message plus ids and JSON overhead. */
-const MAX_BODY_BYTES = 50_000;
+/** Generous cap for a message plus the history a signed-out user sends, with ids and JSON overhead. */
+const MAX_BODY_BYTES = 400_000;
 
 function errorResponse(error: string, status: number) {
   return Response.json({ error }, { status });
+}
+
+/** Replies to a signed-out user: nothing is read from or saved to the database. */
+function guestReply(
+  request: Request,
+  text: string,
+  history: HistoryMessage[],
+) {
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+  if (isRateLimited(`chat:guest:${ip ?? "unknown"}`)) {
+    return errorResponse("Too many messages. Please slow down.", 429);
+  }
+  const headers = { "X-Message-Id": crypto.randomUUID() };
+  if (!isAiEnabled()) {
+    return createTextStreamResponse({
+      headers,
+      stream: mockReplyStream(request.signal, async () => {}),
+    });
+  }
+  const result = streamText({
+    model: getModel(),
+    instructions: SYSTEM_PROMPT,
+    messages: toModelMessages([...history, { role: "USER", content: text }]),
+    maxOutputTokens: MAX_OUTPUT_TOKENS,
+    abortSignal: request.signal,
+  });
+  return createTextStreamResponse({
+    headers,
+    stream: toTextStream({ stream: result.stream }),
+  });
 }
 
 export async function POST(request: Request) {
@@ -35,11 +66,11 @@ export async function POST(request: Request) {
     await request.json().catch(() => null),
   );
   if (!parsed.success) return errorResponse("Invalid input", 400);
-  const { chatId, messageId, text } = parsed.data;
+  const { chatId, messageId, text, history: guestHistory } = parsed.data;
 
   try {
     const userId = await ensureUser();
-    if (!userId) return errorResponse("Sign in to chat", 401);
+    if (!userId) return guestReply(request, text, guestHistory ?? []);
     if (isRateLimited(`chat:${userId}`)) {
       return errorResponse("Too many messages. Please slow down.", 429);
     }

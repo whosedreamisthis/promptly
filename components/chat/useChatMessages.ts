@@ -7,6 +7,9 @@ import type { ChatMessage } from "@/types/chats";
 
 const STREAM_ERROR = "Something went wrong. Please try again.";
 
+/** Earlier turns sent along for signed-out users, whose chats are not stored. */
+export type GuestHistory = { role: "USER" | "ASSISTANT"; content: string }[];
+
 /**
  * Holds the in-memory messages of every opened chat and streams replies from /api/chat.
  * The returned actions keep a stable identity, so only message readers re-render per chunk.
@@ -79,6 +82,7 @@ export function useChatMessages(onFirstReply: (chatId: string) => void) {
       messageId: string,
       text: string,
       isFirstTurn: boolean,
+      guestHistory?: GuestHistory,
     ) => {
       const controller = new AbortController();
       controllersRef.current.set(chatId, controller);
@@ -95,7 +99,12 @@ export function useChatMessages(onFirstReply: (chatId: string) => void) {
         const response = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ chatId, messageId, text }),
+          body: JSON.stringify({
+            chatId,
+            messageId,
+            text,
+            history: guestHistory,
+          }),
           signal: controller.signal,
         });
         if (!response.ok || !response.body) {

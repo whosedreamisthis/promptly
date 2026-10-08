@@ -12,5 +12,9 @@ export default async function ChatsLoader({
   const initialData = userId
     ? await getChatsData(userId)
     : { chats: [], notebooks: [] };
-  return <ChatsProvider initialData={initialData}>{children}</ChatsProvider>;
+  return (
+    <ChatsProvider initialData={initialData} isGuest={!userId}>
+      {children}
+    </ChatsProvider>
+  );
 }

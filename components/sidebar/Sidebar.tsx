@@ -13,6 +13,7 @@ import SidebarFooter from "@/components/sidebar/SidebarFooter";
 import SidebarHeader from "@/components/sidebar/SidebarHeader";
 import SidebarItem from "@/components/sidebar/SidebarItem";
 import SidebarSection from "@/components/sidebar/SidebarSection";
+import SignInRequiredModal from "@/components/sidebar/SignInRequiredModal";
 import { useSidebarMenus } from "@/components/sidebar/useSidebarMenus";
 import { cn } from "@/lib/utils";
 
@@ -48,6 +49,7 @@ export default function Sidebar({
   const {
     chats,
     notebooks,
+    isGuest,
     renameChat,
     renameNotebook,
     createNotebook,
@@ -58,6 +60,7 @@ export default function Sidebar({
     useSidebarMenus({ onDeleteChat, onDeleteNotebook });
   const [query, setQuery] = useState("");
   const [scrolled, setScrolled] = useState(false);
+  const [signInPromptOpen, setSignInPromptOpen] = useState(false);
 
   const filtered = pinnedFirst(
     chats.filter((chat) =>
@@ -133,7 +136,11 @@ export default function Sidebar({
             <Button
               variant="ghost"
               className="h-10 w-full justify-start gap-3 pl-3 font-normal"
-              onClick={() => handleSelectNotebook(createNotebook())}
+              onClick={() =>
+                isGuest
+                  ? setSignInPromptOpen(true)
+                  : handleSelectNotebook(createNotebook())
+              }
             >
               <Plus className="size-5" />
               New notebook
@@ -186,6 +193,12 @@ export default function Sidebar({
         </nav>
 
         <SidebarFooter />
+        <SignInRequiredModal
+          open={signInPromptOpen}
+          onOpenChange={setSignInPromptOpen}
+          feature="Notebooks"
+          onSignIn={onClose}
+        />
       </aside>
     </>
   );

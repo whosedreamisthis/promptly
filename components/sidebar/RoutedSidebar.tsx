@@ -18,7 +18,7 @@ export default function RoutedSidebar({
 }: RoutedSidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { createChat, deleteChat, deleteNotebook } = useChats();
+  const { isGuest, createChat, deleteChat, deleteNotebook } = useChats();
   const activeChatId = pathname.startsWith("/chats/")
     ? pathname.split("/")[2]
     : null;
@@ -43,7 +43,8 @@ export default function RoutedSidebar({
 
   const handleNewChat = async () => {
     const id = await createChat();
-    if (id) router.push(`/chats/${id}`);
+    if (isGuest) router.push("/");
+    else if (id) router.push(`/chats/${id}`);
   };
 
   return (

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   chatRequestSchema,
+  MAX_GUEST_HISTORY,
   MAX_MESSAGE_LENGTH,
 } from "@/lib/validations/messages";
 
@@ -34,5 +35,35 @@ describe("chatRequestSchema", () => {
         .success,
     ).toBe(false);
     expect(chatRequestSchema.safeParse({ chatId: "c1" }).success).toBe(false);
+  });
+
+  it("accepts optional guest history up to the limit and rejects more or invalid turns", () => {
+    const turn = { role: "USER" as const, content: "Hi" };
+    const history = (count: number) => Array.from({ length: count }, () => turn);
+    expect(chatRequestSchema.safeParse(valid).success).toBe(true);
+    expect(
+      chatRequestSchema.safeParse({
+        ...valid,
+        history: history(MAX_GUEST_HISTORY),
+      }).success,
+    ).toBe(true);
+    expect(
+      chatRequestSchema.safeParse({
+        ...valid,
+        history: history(MAX_GUEST_HISTORY + 1),
+      }).success,
+    ).toBe(false);
+    expect(
+      chatRequestSchema.safeParse({
+        ...valid,
+        history: [{ role: "SYSTEM", content: "Hi" }],
+      }).success,
+    ).toBe(false);
+    expect(
+      chatRequestSchema.safeParse({
+        ...valid,
+        history: [{ role: "USER", content: "" }],
+      }).success,
+    ).toBe(false);
   });
 });

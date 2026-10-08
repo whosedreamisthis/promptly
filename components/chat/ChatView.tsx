@@ -8,6 +8,7 @@ import ChatInput from "@/components/chat/ChatInput";
 import ChatThread from "@/components/chat/ChatThread";
 import { useChats, useMessages } from "@/components/chat/ChatsProvider";
 import Logo from "@/components/layout/Logo";
+import { Button } from "@/components/ui/button";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -40,7 +41,8 @@ export default function ChatView({
   }, []);
 
   const router = useRouter();
-  const { chats, notebooks, seedMessages, sendMessage } = useChats();
+  const { chats, notebooks, isGuest, guestChatId, seedMessages, sendMessage } =
+    useChats();
   const { messagesByChat, streamingChatIds } = useMessages();
 
   useEffect(() => {
@@ -50,15 +52,18 @@ export default function ChatView({
   const chat = chats.find((item) => item.id === chatId);
   const notebook = notebooks.find((item) => item.id === chat?.notebookId);
 
-  const messages = chatId ? (messagesByChat[chatId] ?? initialMessages) : [];
-  const streaming = chatId ? streamingChatIds.includes(chatId) : false;
+  const activeId = chatId ?? (isGuest ? guestChatId : undefined);
+  const messages = activeId
+    ? (messagesByChat[activeId] ?? initialMessages)
+    : NO_MESSAGES;
+  const streaming = activeId ? streamingChatIds.includes(activeId) : false;
 
   const handleSubmit = async (submission: ChatSubmission) => {
     const id = await sendMessage(
-      chatId ?? draftChatIdRef.current ?? crypto.randomUUID(),
+      activeId ?? draftChatIdRef.current ?? crypto.randomUUID(),
       submission,
     );
-    if (id && !chatId) router.push(`/chats/${id}`);
+    if (id && !chatId && !isGuest) router.push(`/chats/${id}`);
   };
 
   const greeting = user?.firstName
@@ -100,6 +105,14 @@ export default function ChatView({
         )}
       </div>
       <div className="shrink-0 px-14 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2">
+        {isGuest && (
+          <div className="mx-auto mb-2 flex w-full max-w-3xl items-center justify-between gap-3 rounded-md bg-white/70 px-3 py-2 text-sm text-muted-foreground">
+            <p>Your chats won&apos;t be saved unless you sign in.</p>
+            <Button asChild size="sm" className="shrink-0 rounded-md">
+              <Link href="/sign-in">Sign in</Link>
+            </Button>
+          </div>
+        )}
         <ChatInput disabled={streaming} onSubmit={handleSubmit} />
       </div>
     </div>
