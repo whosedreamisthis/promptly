@@ -1,12 +1,16 @@
 import { z } from "zod";
+import { idSchema } from "@/lib/validations/common";
 
 export const MAX_MESSAGE_LENGTH = 10_000;
 
+const messageText = z.string().trim().min(1).max(MAX_MESSAGE_LENGTH);
+const role = z.enum(["USER", "ASSISTANT"]);
+
 export const addMessageSchema = z.object({
-  id: z.string().min(1).max(64),
-  chatId: z.string().min(1).max(64),
-  role: z.enum(["USER", "ASSISTANT"]),
-  content: z.string().trim().min(1).max(MAX_MESSAGE_LENGTH),
+  id: idSchema,
+  chatId: idSchema,
+  role,
+  content: messageText,
 });
 
 /** Earlier turns a signed-out user sends along, since nothing is stored for them. */
@@ -30,13 +34,13 @@ export function capGuestHistory<T extends { content: string }>(
 }
 
 export const chatRequestSchema = z.object({
-  chatId: z.string().min(1).max(64),
-  messageId: z.string().min(1).max(64),
-  text: z.string().trim().min(1).max(MAX_MESSAGE_LENGTH),
+  chatId: idSchema,
+  messageId: idSchema,
+  text: messageText,
   history: z
     .array(
       z.object({
-        role: z.enum(["USER", "ASSISTANT"]),
+        role,
         content: z.string().min(1).max(MAX_MESSAGE_LENGTH),
       }),
     )

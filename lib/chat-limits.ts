@@ -1,4 +1,5 @@
 import { isAiEnabled } from "@/lib/ai";
+import { positiveIntFromEnv } from "@/lib/env";
 import { checkLimit, type LimitSpec } from "@/lib/rate-limit";
 
 export type ChatCaller = "guest" | "user";
@@ -6,11 +7,6 @@ export type ChatCaller = "guest" | "user";
 const MINUTE_LIMITS: Record<ChatCaller, number> = { guest: 10, user: 20 };
 const DEFAULT_DAILY_LIMIT = 10;
 const DEFAULT_GLOBAL_DAILY_LIMIT = 500;
-
-function positiveIntFromEnv(name: string, fallback: number): number {
-  const configured = Number(process.env[name]);
-  return Number.isInteger(configured) && configured > 0 ? configured : fallback;
-}
 
 /** Model-backed messages each person (guest or signed in) gets per day; set CHAT_DAILY_LIMIT=1 to test the limit. */
 function dailyLimit(): LimitSpec {
