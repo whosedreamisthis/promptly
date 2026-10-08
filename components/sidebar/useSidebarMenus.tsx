@@ -13,18 +13,12 @@ import {
 import { toast } from "sonner";
 import type { MenuAction } from "@/components/chat/ActionsMenu";
 import { useChats } from "@/components/chat/ChatsProvider";
-import type { DeletableKind } from "@/components/chat/ConfirmDeleteDialog";
+import { usePendingDelete } from "@/components/chat/usePendingDelete";
 import type { Chat, Notebook } from "@/types/chats";
 
 interface SidebarMenusOptions {
   onDeleteChat: (id: string) => void;
   onDeleteNotebook: (id: string) => void;
-}
-
-interface PendingDelete {
-  kind: DeletableKind;
-  id: string;
-  title: string;
 }
 
 function PinIcon({ pinned }: { pinned: boolean }) {
@@ -50,21 +44,11 @@ export function useSidebarMenus({
   const { notebooks, moveChatToNotebook, togglePinChat, togglePinNotebook } =
     useChats();
   const [renamingId, setRenamingId] = useState<string | null>(null);
-  // Kept after closing so the dialog does not lose its text while it fades out.
-  const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-
-  const requestDelete = (item: PendingDelete) => {
-    setPendingDelete(item);
-    setDeleteDialogOpen(true);
-  };
-
-  const confirmDelete = () => {
-    if (!pendingDelete) return;
-    if (pendingDelete.kind === "chat") onDeleteChat(pendingDelete.id);
-    else onDeleteNotebook(pendingDelete.id);
-    setDeleteDialogOpen(false);
-  };
+  const { request: requestDelete, dialogProps: deleteDialogProps } =
+    usePendingDelete((item) => {
+      if (item.kind === "chat") onDeleteChat(item.id);
+      else onDeleteNotebook(item.id);
+    });
 
   const chatActions = (chat: Chat): MenuAction[] => [
     {
@@ -129,9 +113,6 @@ export function useSidebarMenus({
     setRenamingId,
     chatActions,
     notebookActions,
-    pendingDelete,
-    deleteDialogOpen,
-    setDeleteDialogOpen,
-    confirmDelete,
+    deleteDialogProps,
   };
 }
