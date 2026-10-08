@@ -1,64 +1,39 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import ChatInput, { type ChatSubmission } from "@/components/chat/ChatInput";
-import ChatThread, { type ChatMessage } from "@/components/chat/ChatThread";
+import ChatThread from "@/components/chat/ChatThread";
+import { useChats } from "@/components/chat/ChatsProvider";
 import Logo from "@/components/layout/Logo";
 
-const MOCK_REPLY =
-  "This is a placeholder reply. The Promptly AI backend isn't connected yet, so I can't answer for real, but your message and attachments came through fine.";
-const STREAM_INTERVAL_MS = 40;
+interface ChatViewProps {
+  /** Omitted on the home page, which uses a pre-generated id until the first message. */
+  chatId?: string;
+}
 
-export default function ChatView() {
+export default function ChatView({ chatId }: ChatViewProps) {
   const { user } = useUser();
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [streaming, setStreaming] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Generated up front so the chat is saved under this id once the user sends a message.
+  const draftChatIdRef = useRef<string | null>(null);
 
-  useEffect(
-    () => () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    },
-    [],
-  );
+  useEffect(() => {
+    draftChatIdRef.current ??= crypto.randomUUID();
+  }, []);
 
-  const streamReply = () => {
-    const words = MOCK_REPLY.split(" ");
-    const id = crypto.randomUUID();
-    let count = 0;
-    setStreaming(true);
-    setMessages((prev) => [
-      ...prev,
-      { id, role: "assistant", text: "", fileNames: [] },
-    ]);
-    timerRef.current = setInterval(() => {
-      count += 1;
-      const text = words.slice(0, count).join(" ");
-      setMessages((prev) =>
-        prev.map((message) =>
-          message.id === id ? { ...message, text } : message,
-        ),
-      );
-      if (count >= words.length) {
-        if (timerRef.current) clearInterval(timerRef.current);
-        timerRef.current = null;
-        setStreaming(false);
-      }
-    }, STREAM_INTERVAL_MS);
-  };
+  const router = useRouter();
+  const { messagesByChat, streamingChatIds, sendMessage } = useChats();
 
-  const handleSubmit = ({ text, files }: ChatSubmission) => {
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: crypto.randomUUID(),
-        role: "user",
-        text,
-        fileNames: files.map((file) => file.name),
-      },
-    ]);
-    streamReply();
+  const messages = chatId ? (messagesByChat[chatId] ?? []) : [];
+  const streaming = chatId ? streamingChatIds.includes(chatId) : false;
+
+  const handleSubmit = (submission: ChatSubmission) => {
+    const id = sendMessage(
+      chatId ?? draftChatIdRef.current ?? crypto.randomUUID(),
+      submission,
+    );
+    if (!chatId) router.push(`/chats/${id}`);
   };
 
   const greeting = user?.firstName

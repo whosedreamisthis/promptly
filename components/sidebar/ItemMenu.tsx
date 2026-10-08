@@ -22,7 +22,12 @@ interface ItemMenuProps {
 const MENU_WIDTH = 208;
 const MENU_ROW_HEIGHT = 40;
 
-export default function ItemMenu({ anchor, triggerRef, actions, onClose }: ItemMenuProps) {
+export default function ItemMenu({
+  anchor,
+  triggerRef,
+  actions,
+  onClose,
+}: ItemMenuProps) {
   const [submenu, setSubmenu] = useState<MenuAction | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -52,7 +57,9 @@ export default function ItemMenu({ anchor, triggerRef, actions, onClose }: ItemM
   const items = submenu?.children ?? actions;
   const height = (items.length + (submenu ? 1 : 0)) * MENU_ROW_HEIGHT + 16;
   const fitsBelow = anchor.bottom + height < window.innerHeight;
-  const top = fitsBelow ? anchor.bottom + 4 : Math.max(8, anchor.top - height - 4);
+  const top = fitsBelow
+    ? anchor.bottom + 4
+    : Math.max(8, anchor.top - height - 4);
   const left = Math.max(8, anchor.right - MENU_WIDTH);
 
   const handleSelect = (action: MenuAction) => {

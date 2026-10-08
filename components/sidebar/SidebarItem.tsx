@@ -60,7 +60,8 @@ export default function SidebarItem({
             }}
             onBlur={(event) => finishRename(event.currentTarget.value)}
             onKeyDown={(event) => {
-              if (event.key === "Enter") finishRename(event.currentTarget.value);
+              if (event.key === "Enter")
+                finishRename(event.currentTarget.value);
               if (event.key === "Escape") {
                 settled.current = true;
                 onCancelRename();

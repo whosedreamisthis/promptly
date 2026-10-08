@@ -229,6 +229,7 @@ export default function Sidebar({
           <button
             type="button"
             onClick={() => {
+              setActiveNotebookId(null);
               onNewChat();
               onClose();
             }}
@@ -282,7 +283,7 @@ export default function Sidebar({
                   key={chat.id}
                   icon={<MessageSquare className="h-4 w-4" />}
                   label={chat.title}
-                  active={chat.id === activeChatId}
+                  active={!activeNotebookId && chat.id === activeChatId}
                   pinned={!!chat.pinned}
                   renaming={renamingId === chat.id}
                   actions={chatActions(chat)}

@@ -1,11 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { Show, UserButton } from "@clerk/nextjs";
 import { Menu } from "lucide-react";
 import { USER_MENU_POPOVER_CLASS } from "@/lib/clerk-appearance";
-import Sidebar from "@/components/sidebar/Sidebar";
-import { MOCK_CHATS, type Chat } from "@/lib/mock-chats";
+import RoutedSidebar from "@/components/sidebar/RoutedSidebar";
 
 interface AppShellProps {
   navbar: React.ReactNode;
@@ -13,13 +12,8 @@ interface AppShellProps {
 }
 
 export default function AppShell({ navbar, children }: AppShellProps) {
-  const [chats, setChats] = useState<Chat[]>(MOCK_CHATS);
-  const [activeChatId, setActiveChatId] = useState<string | null>(
-    MOCK_CHATS[0].id,
-  );
   const [closed, setClosed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [chatViewKey, setChatViewKey] = useState(0);
 
   const handleOpen = () => {
     setClosed(false);
@@ -31,47 +25,15 @@ export default function AppShell({ navbar, children }: AppShellProps) {
     setMobileOpen(false);
   };
 
-  const handleNewChat = () => {
-    const chat: Chat = { id: crypto.randomUUID(), title: "New chat" };
-    setChats((prev) => [chat, ...prev]);
-    setActiveChatId(chat.id);
-    // Remounting the page content resets the chat view to its empty state.
-    setChatViewKey((prev) => prev + 1);
-  };
-
-  const handleRenameChat = (id: string, title: string) => {
-    setChats((prev) =>
-      prev.map((chat) => (chat.id === id ? { ...chat, title } : chat)),
-    );
-  };
-
-  const handleTogglePinChat = (id: string) => {
-    setChats((prev) =>
-      prev.map((chat) =>
-        chat.id === id ? { ...chat, pinned: !chat.pinned } : chat,
-      ),
-    );
-  };
-
-  const handleDeleteChat = (id: string) => {
-    setChats((prev) => prev.filter((chat) => chat.id !== id));
-    setActiveChatId((prev) => (prev === id ? null : prev));
-  };
-
   return (
     <div className="flex h-full">
-      <Sidebar
-        chats={chats}
-        activeChatId={activeChatId}
-        closed={closed}
-        mobileOpen={mobileOpen}
-        onClose={handleClose}
-        onNewChat={handleNewChat}
-        onSelectChat={setActiveChatId}
-        onRenameChat={handleRenameChat}
-        onTogglePinChat={handleTogglePinChat}
-        onDeleteChat={handleDeleteChat}
-      />
+      <Suspense fallback={null}>
+        <RoutedSidebar
+          closed={closed}
+          mobileOpen={mobileOpen}
+          onClose={handleClose}
+        />
+      </Suspense>
       <div className="relative flex min-w-0 flex-1 flex-col">
         {navbar}
         <div
@@ -107,10 +69,7 @@ export default function AppShell({ navbar, children }: AppShellProps) {
             />
           </div>
         </Show>
-        <main
-          key={chatViewKey}
-          className="flex min-h-0 flex-1 flex-col overflow-y-auto"
-        >
+        <main className="flex min-h-0 flex-1 flex-col overflow-y-auto">
           {children}
         </main>
       </div>
