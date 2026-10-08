@@ -38,3 +38,4 @@ Completed
 - **Model Fallback:** Streams a sample reply when the model fails or returns nothing, such as when its quota is used up; key files `lib/ai.ts`, `app/api/chat/route.ts`.
 - **Settings Modal:** Fills the sidebar footer settings modal with a dark mode switch and a free tier Gemini model dropdown saved per user; key files `components/sidebar/SettingsModal.tsx`, `actions/settings.ts`, `lib/models.ts`.
 - **New Color Theme:** Replaces the pastel palette with mint, cerulean, rose and plum light and dark themes, including a mauve light mode, plum dark surfaces and a new logo gradient; key files `app/globals.css`, `context/colors.md`, `components/layout/Logo.tsx`.
+- **Demo Mode:** Adds a Try the demo button that signs visitors into a temporary, freshly seeded Clerk user, with a banner, usage limits and daily cleanup; key files `app/api/demo/route.ts`, `lib/seed-user.ts`, `components/layout/DemoButton.tsx`.
