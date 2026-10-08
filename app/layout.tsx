@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { ClerkProvider } from "@clerk/nextjs";
 import NavBar from "@/components/layout/NavBar";
+import AppShell from "@/components/sidebar/AppShell";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -34,16 +35,21 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
+      <body className="h-screen overflow-hidden">
         <ClerkProvider
           signInUrl="/sign-in"
           signUpUrl="/register"
           localization={CLERK_LOCALIZATION}
         >
-          <Suspense fallback={<div className="h-16 border-b border-white/60 bg-white/40" />}>
-            <NavBar />
-          </Suspense>
-          {children}
+          <AppShell
+            navbar={
+              <Suspense fallback={<div className="h-16 border-b border-white/60 bg-white/40" />}>
+                <NavBar />
+              </Suspense>
+            }
+          >
+            {children}
+          </AppShell>
         </ClerkProvider>
       </body>
     </html>
