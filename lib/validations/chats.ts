@@ -1,7 +1,8 @@
 import { z } from "zod";
+import { MAX_NOTEBOOK_TITLE_LENGTH } from "@/lib/notebooks";
+import { idSchema as id } from "@/lib/validations/common";
 
-const id = z.string().min(1).max(64);
-const title = z.string().trim().min(1).max(200);
+const title = z.string().trim().min(1).max(MAX_NOTEBOOK_TITLE_LENGTH);
 
 export const createChatSchema = z.object({
   id,

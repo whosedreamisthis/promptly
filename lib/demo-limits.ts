@@ -1,3 +1,4 @@
+import { positiveIntFromEnv } from "@/lib/env";
 import { checkLimit } from "@/lib/rate-limit";
 
 const DEFAULT_LIMIT_PER_IP = 3;
@@ -9,11 +10,6 @@ export const DEMO_EMAIL_DOMAIN = "promptly-demo.example.com";
 export const MAX_LIVE_DEMO_USERS = 150;
 
 const HOUR_MS = 3_600_000;
-
-function positiveIntFromEnv(name: string, fallback: number): number {
-  const configured = Number(process.env[name]);
-  return Number.isInteger(configured) && configured > 0 ? configured : fallback;
-}
 
 /**
  * The caller's address from a header the hosting platform sets (clients can't forge it),
