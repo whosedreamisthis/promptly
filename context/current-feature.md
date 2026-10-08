@@ -1,20 +1,27 @@
-# Current Feature
+# Current Feature: Database Seed
 
-<!-- Feature name and short description -->
+Database Seed: seed development data from `context/features/seed-spec.md`.
 
 ## Status
 
 <!-- Not Started | In Progress | Completed -->
 
-Completed
+In Progress
 
 ## Goals
 
 <!-- Goals and requirements -->
 
+- Seed 5 notebooks, 20 chats and 82 messages for the target user
+- Re-runnable without duplicates
+- Refuse to run against anything but the development database
+
 ## Notes
 
 <!-- Any extra notes -->
+
+- Development Neon branch only, never `production`
+- See `seed-spec.md` for data, files and the safety guard
 
 ## Completed Features
 
