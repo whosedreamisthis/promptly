@@ -30,10 +30,11 @@ import { USER_MENU_POPOVER_CLASS } from "@/lib/clerk-appearance";
 import type { MenuAction } from "@/components/sidebar/SidebarItem";
 import SidebarItem from "@/components/sidebar/SidebarItem";
 import SidebarSection from "@/components/sidebar/SidebarSection";
-import { MOCK_NOTEBOOKS, type Chat, type Notebook } from "@/lib/mock-chats";
+import type { Chat, Notebook } from "@/types/chats";
 
 interface SidebarProps {
   chats: Chat[];
+  notebooks: Notebook[];
   activeChatId: string | null;
   closed: boolean;
   mobileOpen: boolean;
@@ -43,6 +44,12 @@ interface SidebarProps {
   onRenameChat: (id: string, title: string) => void;
   onTogglePinChat: (id: string) => void;
   onDeleteChat: (id: string) => void;
+  onMoveChat: (chatId: string, notebookId: string | null) => void;
+  /** Creates a notebook and returns its id. */
+  onNewNotebook: () => string;
+  onRenameNotebook: (id: string, title: string) => void;
+  onTogglePinNotebook: (id: string) => void;
+  onDeleteNotebook: (id: string) => void;
 }
 
 function pinnedFirst<T extends { pinned?: boolean }>(items: T[]): T[] {
@@ -51,6 +58,7 @@ function pinnedFirst<T extends { pinned?: boolean }>(items: T[]): T[] {
 
 export default function Sidebar({
   chats,
+  notebooks,
   activeChatId,
   closed,
   mobileOpen,
@@ -60,10 +68,14 @@ export default function Sidebar({
   onRenameChat,
   onTogglePinChat,
   onDeleteChat,
+  onMoveChat,
+  onNewNotebook,
+  onRenameNotebook,
+  onTogglePinNotebook,
+  onDeleteNotebook,
 }: SidebarProps) {
   const [query, setQuery] = useState("");
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [notebooks, setNotebooks] = useState<Notebook[]>(MOCK_NOTEBOOKS);
   const [scrolled, setScrolled] = useState(false);
   const [activeNotebookId, setActiveNotebookId] = useState<string | null>(null);
 
@@ -88,36 +100,12 @@ export default function Sidebar({
   };
 
   const handleNewNotebook = () => {
-    const notebook: Notebook = {
-      id: crypto.randomUUID(),
-      title: "Untitled notebook",
-      chatIds: [],
-    };
-    setNotebooks((prev) => [notebook, ...prev]);
-    handleSelectNotebook(notebook.id);
+    handleSelectNotebook(onNewNotebook());
   };
 
-  const updateNotebook = (id: string, changes: Partial<Notebook>) => {
-    setNotebooks((prev) =>
-      prev.map((notebook) =>
-        notebook.id === id ? { ...notebook, ...changes } : notebook,
-      ),
-    );
-  };
-
-  const deleteNotebook = (id: string) => {
-    setNotebooks((prev) => prev.filter((notebook) => notebook.id !== id));
+  const handleDeleteNotebook = (id: string) => {
+    onDeleteNotebook(id);
     setActiveNotebookId((prev) => (prev === id ? null : prev));
-  };
-
-  const addChatToNotebook = (notebookId: string, chatId: string) => {
-    setNotebooks((prev) =>
-      prev.map((notebook) =>
-        notebook.id === notebookId && !notebook.chatIds.includes(chatId)
-          ? { ...notebook, chatIds: [...notebook.chatIds, chatId] }
-          : notebook,
-      ),
-    );
   };
 
   const chatActions = (chat: Chat): MenuAction[] => [
@@ -150,7 +138,7 @@ export default function Sidebar({
       children: notebooks.map((notebook) => ({
         label: notebook.title,
         icon: <BookOpen className="h-4 w-4" />,
-        onSelect: () => addChatToNotebook(notebook.id, chat.id),
+        onSelect: () => onMoveChat(chat.id, notebook.id),
       })),
     },
     {
@@ -169,7 +157,7 @@ export default function Sidebar({
       ) : (
         <Pin className="h-4 w-4" />
       ),
-      onSelect: () => updateNotebook(notebook.id, { pinned: !notebook.pinned }),
+      onSelect: () => onTogglePinNotebook(notebook.id),
     },
     {
       label: "Rename",
@@ -180,7 +168,7 @@ export default function Sidebar({
       label: "Delete",
       icon: <Trash2 className="h-4 w-4" />,
       danger: true,
-      onSelect: () => deleteNotebook(notebook.id),
+      onSelect: () => handleDeleteNotebook(notebook.id),
     },
   ];
 
@@ -269,7 +257,7 @@ export default function Sidebar({
                 actions={notebookActions(notebook)}
                 onSelect={() => handleSelectNotebook(notebook.id)}
                 onRename={(title) => {
-                  updateNotebook(notebook.id, { title });
+                  onRenameNotebook(notebook.id, title);
                   setRenamingId(null);
                 }}
                 onCancelRename={() => setRenamingId(null)}

@@ -44,11 +44,11 @@ Do **not** flag these unless the code explicitly disables or overrides the built
 
 Start by mapping the auth code with Glob and Grep. Key locations (verify they still exist, and look for new auth-related files too):
 
-- `src/auth.ts`, `src/auth.config.ts`, `src/proxy.ts`, `src/types/next-auth.d.ts`
-- `src/actions/auth.ts`, `src/actions/profile.ts`
-- `src/app/(auth)/**` (sign-in, register, verify-email, forgot-password, reset-password)
-- `src/app/profile/**`, `src/components/profile/**`, `src/components/auth/**`
-- `src/lib/tokens.ts`, `src/lib/verification.ts`, `src/lib/password-reset.ts`, `src/lib/account.ts`, `src/lib/email.ts`, `src/lib/validations/auth.ts`, `src/lib/db/users.ts`
+- `auth.ts`, `auth.config.ts`, `proxy.ts`, `types/next-auth.d.ts`
+- `actions/auth.ts`, `actions/profile.ts`
+- `app/(auth)/**` (sign-in, register, verify-email, forgot-password, reset-password)
+- `app/profile/**`, `components/profile/**`, `components/auth/**`
+- `lib/tokens.ts`, `lib/verification.ts`, `lib/password-reset.ts`, `lib/account.ts`, `lib/email.ts`, `lib/validations/auth.ts`, `lib/db/users.ts`
 - `prisma/schema.prisma` (User, VerificationToken, cascade rules)
 
 ### 1. Areas NextAuth does not handle
@@ -136,7 +136,7 @@ Use this structure:
 ## Passed Checks
 
 <Bulleted list of security controls that are implemented correctly, each with its file location, e.g.
-"✅ Reset tokens are 32 random bytes from `crypto.randomBytes` and stored as SHA-256 hashes (`src/lib/tokens.ts:7-14`)". Cover each audited area: hashing, credential checks, verification tokens, reset tokens, single-use, expiry, enumeration resistance, redirects, session validation in actions, route protection, data exposure.>
+"✅ Reset tokens are 32 random bytes from `crypto.randomBytes` and stored as SHA-256 hashes (`lib/tokens.ts:7-14`)". Cover each audited area: hashing, credential checks, verification tokens, reset tokens, single-use, expiry, enumeration resistance, redirects, session validation in actions, route protection, data exposure.>
 
 ## Notes
 

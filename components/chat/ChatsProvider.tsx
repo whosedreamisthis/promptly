@@ -1,27 +1,58 @@
 "use client";
 
 import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
+import {
+  autoTitleChat,
+  createChat as createChatAction,
+  deleteChat as deleteChatAction,
+  moveChatToNotebook as moveChatAction,
+  renameChat as renameChatAction,
+  togglePinChat as togglePinChatAction,
+} from "@/actions/chats";
+import {
+  createNotebook as createNotebookAction,
+  deleteNotebook as deleteNotebookAction,
+  renameNotebook as renameNotebookAction,
+  togglePinNotebook as togglePinNotebookAction,
+} from "@/actions/notebooks";
 import type { ChatSubmission } from "@/components/chat/ChatInput";
 import type { ChatMessage } from "@/components/chat/ChatThread";
-import { MOCK_CHATS, type Chat } from "@/lib/mock-chats";
+import type { ActionResult } from "@/types/actions";
+import {
+  NEW_CHAT_TITLE,
+  type Chat,
+  type ChatsData,
+  type Notebook,
+} from "@/types/chats";
 
 const MOCK_REPLY =
   "This is a placeholder reply. The Promptly AI backend isn't connected yet, so I can't answer for real, but your message and attachments came through fine.";
 const STREAM_INTERVAL_MS = 40;
 const TITLE_MAX_LENGTH = 40;
-const NEW_CHAT_TITLE = "New chat";
+const NEW_NOTEBOOK_TITLE = "Untitled notebook";
 
 interface ChatsContextValue {
   chats: Chat[];
+  notebooks: Notebook[];
   messagesByChat: Record<string, ChatMessage[]>;
   streamingChatIds: string[];
-  /** Creates an empty chat and returns its id (reuses an untouched empty one). */
-  createChat: () => string;
-  /** Sends a message; creates a new chat when `chatId` is null. Returns the chat id. */
-  sendMessage: (chatId: string | null, submission: ChatSubmission) => string;
+  /** Creates an empty chat and returns its id (reuses an untouched empty one), or null if saving failed. */
+  createChat: () => Promise<string | null>;
+  /** Sends a message, saving the chat first when it is new. Resolves with the chat id, or null if saving failed. */
+  sendMessage: (
+    chatId: string,
+    submission: ChatSubmission,
+  ) => Promise<string | null>;
   renameChat: (id: string, title: string) => void;
   togglePinChat: (id: string) => void;
   deleteChat: (id: string) => void;
+  moveChatToNotebook: (chatId: string, notebookId: string | null) => void;
+  /** Creates a notebook and returns its id. */
+  createNotebook: () => string;
+  renameNotebook: (id: string, title: string) => void;
+  togglePinNotebook: (id: string) => void;
+  deleteNotebook: (id: string) => void;
 }
 
 const ChatsContext = createContext<ChatsContextValue | null>(null);
@@ -39,12 +70,32 @@ function titleFor({ text, files }: ChatSubmission): string {
     : source;
 }
 
-export default function ChatsProvider({
-  children,
-}: {
+/** Awaits a server action; on failure shows its error and calls `rollback`. */
+async function persist<T>(
+  action: Promise<ActionResult<T>>,
+  rollback: () => void,
+): Promise<boolean> {
+  const result = await action;
+  if (!result.success) {
+    rollback();
+    toast.error(result.error);
+  }
+  return result.success;
+}
+
+interface ChatsProviderProps {
+  initialData: ChatsData;
   children: React.ReactNode;
-}) {
-  const [chats, setChats] = useState<Chat[]>(MOCK_CHATS);
+}
+
+export default function ChatsProvider({
+  initialData,
+  children,
+}: ChatsProviderProps) {
+  const [chats, setChats] = useState<Chat[]>(initialData.chats);
+  const [notebooks, setNotebooks] = useState<Notebook[]>(
+    initialData.notebooks,
+  );
   const [messagesByChat, setMessagesByChat] = useState<
     Record<string, ChatMessage[]>
   >({});
@@ -97,7 +148,30 @@ export default function ChatsProvider({
     timersRef.current.set(chatId, timer);
   };
 
-  const createChat = () => {
+  const updateChat = (id: string, changes: Partial<Chat>) => {
+    setChats((prev) =>
+      prev.map((chat) => (chat.id === id ? { ...chat, ...changes } : chat)),
+    );
+  };
+
+  const removeChat = (id: string) => {
+    stopStreaming(id);
+    setChats((prev) => prev.filter((chat) => chat.id !== id));
+    setMessagesByChat((prev) =>
+      Object.fromEntries(
+        Object.entries(prev).filter(([chatId]) => chatId !== id),
+      ),
+    );
+  };
+
+  const addChat = (id: string, title: string) => {
+    setChats((prev) => [
+      { id, title, pinned: false, notebookId: null },
+      ...prev,
+    ]);
+  };
+
+  const createChat = async () => {
     const [newest] = chats;
     if (
       newest?.title === NEW_CHAT_TITLE &&
@@ -106,20 +180,26 @@ export default function ChatsProvider({
       return newest.id;
     }
     const id = crypto.randomUUID();
-    setChats((prev) => [{ id, title: NEW_CHAT_TITLE }, ...prev]);
-    return id;
+    addChat(id, NEW_CHAT_TITLE);
+    const saved = await persist(createChatAction({ id }), () => removeChat(id));
+    return saved ? id : null;
   };
 
-  const sendMessage = (chatId: string | null, submission: ChatSubmission) => {
-    const id = chatId ?? crypto.randomUUID();
+  const sendMessage = async (id: string, submission: ChatSubmission) => {
     const existing = chats.find((chat) => chat.id === id);
+    const title = titleFor(submission);
     if (!existing) {
-      setChats((prev) => [{ id, title: titleFor(submission) }, ...prev]);
+      addChat(id, title);
+      const saved = await persist(createChatAction({ id, title }), () =>
+        removeChat(id),
+      );
+      if (!saved) return null;
     } else if (
       existing.title === NEW_CHAT_TITLE &&
       (messagesByChat[id] ?? []).length === 0
     ) {
-      renameChat(id, titleFor(submission));
+      updateChat(id, { title });
+      void autoTitleChat({ chatId: id, title });
     }
     addMessage(id, {
       id: crypto.randomUUID(),
@@ -132,33 +212,100 @@ export default function ChatsProvider({
   };
 
   const renameChat = (id: string, title: string) => {
-    setChats((prev) =>
-      prev.map((chat) => (chat.id === id ? { ...chat, title } : chat)),
-    );
+    const previous = chats.find((chat) => chat.id === id)?.title;
+    updateChat(id, { title });
+    void persist(renameChatAction({ chatId: id, title }), () => {
+      if (previous !== undefined) updateChat(id, { title: previous });
+    });
   };
 
   const togglePinChat = (id: string) => {
-    setChats((prev) =>
-      prev.map((chat) =>
-        chat.id === id ? { ...chat, pinned: !chat.pinned } : chat,
-      ),
+    const pinned = chats.find((chat) => chat.id === id)?.pinned ?? false;
+    updateChat(id, { pinned: !pinned });
+    void persist(togglePinChatAction({ chatId: id }), () =>
+      updateChat(id, { pinned }),
     );
   };
 
   const deleteChat = (id: string) => {
-    stopStreaming(id);
-    setChats((prev) => prev.filter((chat) => chat.id !== id));
-    setMessagesByChat((prev) =>
-      Object.fromEntries(
-        Object.entries(prev).filter(([chatId]) => chatId !== id),
+    const removed = chats.find((chat) => chat.id === id);
+    removeChat(id);
+    void persist(deleteChatAction({ chatId: id }), () => {
+      if (removed) setChats((prev) => [removed, ...prev]);
+    });
+  };
+
+  const moveChatToNotebook = (chatId: string, notebookId: string | null) => {
+    const previous = chats.find((chat) => chat.id === chatId)?.notebookId;
+    updateChat(chatId, { notebookId });
+    void persist(moveChatAction({ chatId, notebookId }), () =>
+      updateChat(chatId, { notebookId: previous ?? null }),
+    );
+  };
+
+  const updateNotebook = (id: string, changes: Partial<Notebook>) => {
+    setNotebooks((prev) =>
+      prev.map((notebook) =>
+        notebook.id === id ? { ...notebook, ...changes } : notebook,
       ),
     );
+  };
+
+  const createNotebook = () => {
+    const id = crypto.randomUUID();
+    setNotebooks((prev) => [
+      { id, title: NEW_NOTEBOOK_TITLE, pinned: false },
+      ...prev,
+    ]);
+    void persist(createNotebookAction({ id, title: NEW_NOTEBOOK_TITLE }), () =>
+      setNotebooks((prev) => prev.filter((notebook) => notebook.id !== id)),
+    );
+    return id;
+  };
+
+  const renameNotebook = (id: string, title: string) => {
+    const previous = notebooks.find((notebook) => notebook.id === id)?.title;
+    updateNotebook(id, { title });
+    void persist(renameNotebookAction({ notebookId: id, title }), () => {
+      if (previous !== undefined) updateNotebook(id, { title: previous });
+    });
+  };
+
+  const togglePinNotebook = (id: string) => {
+    const pinned =
+      notebooks.find((notebook) => notebook.id === id)?.pinned ?? false;
+    updateNotebook(id, { pinned: !pinned });
+    void persist(togglePinNotebookAction({ notebookId: id }), () =>
+      updateNotebook(id, { pinned }),
+    );
+  };
+
+  const deleteNotebook = (id: string) => {
+    const removed = notebooks.find((notebook) => notebook.id === id);
+    const memberIds = chats
+      .filter((chat) => chat.notebookId === id)
+      .map((chat) => chat.id);
+    setNotebooks((prev) => prev.filter((notebook) => notebook.id !== id));
+    setChats((prev) =>
+      prev.map((chat) =>
+        chat.notebookId === id ? { ...chat, notebookId: null } : chat,
+      ),
+    );
+    void persist(deleteNotebookAction({ notebookId: id }), () => {
+      if (removed) setNotebooks((prev) => [removed, ...prev]);
+      setChats((prev) =>
+        prev.map((chat) =>
+          memberIds.includes(chat.id) ? { ...chat, notebookId: id } : chat,
+        ),
+      );
+    });
   };
 
   return (
     <ChatsContext.Provider
       value={{
         chats,
+        notebooks,
         messagesByChat,
         streamingChatIds,
         createChat,
@@ -166,6 +313,11 @@ export default function ChatsProvider({
         renameChat,
         togglePinChat,
         deleteChat,
+        moveChatToNotebook,
+        createNotebook,
+        renameNotebook,
+        togglePinNotebook,
+        deleteNotebook,
       }}
     >
       {children}

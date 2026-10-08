@@ -34,7 +34,7 @@
 **CRITICAL**: We are using Tailwind CSS v4, which uses CSS-based configuration.
 
 - **DO NOT** create `tailwind.config.ts` or `tailwind.config.js` files (those are for v3)
-- All theme configuration must be done in CSS using the `@theme` directive in `src/app/globals.css`
+- All theme configuration must be done in CSS using the `@theme` directive in `app/globals.css`
 - Use CSS custom properties for colors, spacing, etc.
 - No JavaScript-based config allowed
 
@@ -50,11 +50,11 @@ Example v4 configuration:
 
 ## File Organization
 
-- Components: `src/components/[feature]/ComponentName.tsx`
-- Pages: `src/app/[route]/page.tsx`
-- Server Actions: `src/actions/[feature].ts`
-- Types: `src/types/[feature].ts`
-- Lib/Utils: `src/lib/[utility].ts`
+- Components: `components/[feature]/ComponentName.tsx`
+- Pages: `app/[route]/page.tsx`
+- Server Actions: `actions/[feature].ts`
+- Types: `types/[feature].ts`
+- Lib/Utils: `lib/[utility].ts`
 
 ## Naming
 
@@ -80,6 +80,7 @@ Example v4 configuration:
 - Always use `prisma migrate dev` for schema changes (not `db push`)
 - Run `prisma migrate status` before committing to verify migrations are in sync
 - Production deployments must run `prisma migrate deploy` before the app starts
+- Never run `prisma db push` or `prisma migrate reset` against production; production schema changes happen only through `prisma migrate deploy`
 
 ## Data Fetching
 
@@ -97,7 +98,7 @@ Example v4 configuration:
 
 - Unit tests use **Vitest** (`vitest.config.ts`): `npm test` runs once, `npm run test:watch` watches
 - Test server actions and utilities only, not components or pages
-- Name test files `*.test.ts` and put them next to the code they test (e.g. `src/lib/tokens.test.ts`, `src/actions/profile.test.ts`); only `src/**/*.test.ts` is collected
+- Name test files `*.test.ts` and put them next to the code they test (e.g. `lib/tokens.test.ts`, `actions/profile.test.ts`); only `**/*.test.ts` is collected
 - Import `describe`, `it`, `expect` and `vi` from `vitest` explicitly (no globals)
 - Never hit the database, email or Redis in unit tests: mock dependencies such as `@/auth`, `@/lib/db` and `next/headers` with `vi.mock`
 - Cover the happy path and the error cases (no session, invalid input, failures); don't write tests just to write them
