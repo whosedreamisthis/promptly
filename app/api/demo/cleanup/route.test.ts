@@ -18,8 +18,16 @@ function cleanupRequest(secret?: string) {
   });
 }
 
-function user(id: string, demo: boolean) {
-  return { id, publicMetadata: demo ? { demo: true } : {} };
+function user(
+  id: string,
+  demo: boolean,
+  email = "demo-1@promptly-demo.example.com",
+) {
+  return {
+    id,
+    publicMetadata: demo ? { demo: true } : {},
+    emailAddresses: [{ emailAddress: email }],
+  };
 }
 
 beforeEach(() => {
@@ -32,6 +40,18 @@ beforeEach(() => {
 });
 
 describe("GET /api/demo/cleanup", () => {
+  it("skips a flagged user whose email is not on the demo domain", async () => {
+    clerk.users.getUserList.mockResolvedValueOnce({
+      data: [user("user_odd", true, "me@promptly-demo.example.com.evil.io")],
+    });
+
+    const body = await (await GET(cleanupRequest("s3cret"))).json();
+
+    expect(body.deleted).toBe(0);
+    expect(clerk.users.deleteUser).not.toHaveBeenCalled();
+    expect(db.user.deleteMany).not.toHaveBeenCalled();
+  });
+
   it("rejects requests without the secret", async () => {
     expect((await GET(cleanupRequest())).status).toBe(401);
     expect((await GET(cleanupRequest("wrong"))).status).toBe(401);

@@ -1,5 +1,5 @@
 import { timingSafeEqual } from "node:crypto";
-import { clerkClient } from "@clerk/nextjs/server";
+import { clerkClient, type User } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 import { DEMO_EMAIL_DOMAIN, demoTtlMs } from "@/lib/demo-limits";
 
@@ -15,6 +15,18 @@ function isAuthorized(request: Request): boolean {
   const expected = Buffer.from(`Bearer ${secret}`);
   const given = Buffer.from(request.headers.get("authorization") ?? "");
   return given.length === expected.length && timingSafeEqual(given, expected);
+}
+
+/** Only users flagged as demo whose every email is on the demo domain; Clerk's query is a fuzzy match. */
+function isDemoUser(user: User): boolean {
+  const { emailAddresses } = user;
+  return (
+    user.publicMetadata.demo === true &&
+    emailAddresses.length > 0 &&
+    emailAddresses.every((email) =>
+      email.emailAddress.endsWith(`@${DEMO_EMAIL_DOMAIN}`),
+    )
+  );
 }
 
 /** Deletes demo users older than the TTL from the database and Clerk; called daily by Vercel Cron. */
@@ -36,7 +48,7 @@ export async function GET(request: Request) {
         limit: PAGE_SIZE,
       });
       const demoIds = users
-        .filter((user) => user.publicMetadata.demo === true)
+        .filter(isDemoUser)
         .map((user) => user.id);
       if (demoIds.length === 0) break;
 
