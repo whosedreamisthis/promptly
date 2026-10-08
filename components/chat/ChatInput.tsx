@@ -128,7 +128,7 @@ export default function ChatInput({ disabled, onSubmit }: ChatInputProps) {
           }}
         />
         <InputGroup
-          className={`h-auto rounded-lg bg-white p-1 shadow-soft ${
+          className={`h-auto rounded-lg bg-surface-input p-1 shadow-soft ${
             dragging ? "border-ring ring-2 ring-ring/50" : ""
           }`}
         >
@@ -180,7 +180,7 @@ export default function ChatInput({ disabled, onSubmit }: ChatInputProps) {
                     className={cn(
                       ICON_BUTTON_CLASS,
                       listening &&
-                        "bg-pastel-blush hover:bg-pastel-blush motion-safe:animate-pulse",
+                        "bg-rose hover:bg-rose motion-safe:animate-pulse",
                     )}
                   >
                     <Mic className="size-5" />

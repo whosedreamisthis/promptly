@@ -11,7 +11,7 @@ export default function NavBar() {
             <Button
               asChild
               variant="ghost"
-              className="h-9 px-4 hover:bg-pastel-peach"
+              className="h-9 px-4 hover:bg-highlight hover:text-highlight-foreground"
             >
               <Link href="/sign-in">Sign in</Link>
             </Button>

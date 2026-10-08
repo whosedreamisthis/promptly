@@ -64,7 +64,7 @@ const MessageRow = memo(function MessageRow({
           className={cn(
             "min-w-0 max-w-[85%] overflow-x-auto rounded-2xl px-4 py-2 text-base",
             isUser
-              ? "whitespace-pre-wrap bg-pastel-lavender"
+              ? "whitespace-pre-wrap bg-user-bubble text-user-bubble-foreground"
               : "border border-surface-border bg-surface-card",
           )}
         >
