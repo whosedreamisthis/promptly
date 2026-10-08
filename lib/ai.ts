@@ -40,6 +40,13 @@ export const LIMIT_REPLY = [
   MOCK_SAMPLE,
 ].join("\n");
 
+/** Shown instead of a model reply when the model fails or returns nothing. */
+export const FALLBACK_REPLY = [
+  "Live AI replies aren't available right now, so this is a **sample reply**. Please try again later.",
+  "",
+  MOCK_SAMPLE,
+].join("\n");
+
 /** Real model calls are skipped only when USE_AI_MODEL is exactly "false". */
 export function isAiEnabled(): boolean {
   return process.env.USE_AI_MODEL !== "false";
@@ -61,6 +68,44 @@ export function mockReplyStream(
       }
       controller.close();
       if (!signal.aborted) await onComplete(reply);
+    },
+  });
+}
+
+/**
+ * Passes `source` through. If it fails or ends without any text (the model's quota is used
+ * up, say), streams `fallback` instead and reports it through `onFallback` unless aborted.
+ */
+export function withFallback(
+  source: ReadableStream<string>,
+  signal: AbortSignal,
+  fallback: string,
+  onFallback: (text: string) => Promise<void>,
+): ReadableStream<string> {
+  return new ReadableStream<string>({
+    async start(controller) {
+      let produced = false;
+      try {
+        const reader = source.getReader();
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          if (value) {
+            produced = true;
+            controller.enqueue(value);
+          }
+        }
+      } catch (error) {
+        if (!signal.aborted) console.error(error);
+      }
+      if (produced || signal.aborted) return controller.close();
+      const reader = mockReplyStream(signal, onFallback, fallback).getReader();
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        controller.enqueue(value);
+      }
+      controller.close();
     },
   });
 }

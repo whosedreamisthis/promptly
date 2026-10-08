@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import {
   getModel,
   HISTORY_LIMIT,
+  FALLBACK_REPLY,
   type HistoryMessage,
   LIMIT_REPLY,
   mockReplyStream,
@@ -10,6 +11,7 @@ import {
   MOCK_REPLY,
   SYSTEM_PROMPT,
   toModelMessages,
+  withFallback,
 } from "@/lib/ai";
 import {
   chooseReplySource,
@@ -26,7 +28,9 @@ import {
 
 export const maxDuration = 60;
 
-const GENERIC_ERROR = "Something went wrong. Please try again.";
+/** One retry covers a transient failure without making users wait long before the fallback reply. */
+const MODEL_MAX_RETRIES = 1;
+const GENERIC_ERROR ="Something went wrong. Please try again.";
 /** Generous cap for a message plus the history a signed-out user sends, with ids and JSON overhead. */
 const MAX_BODY_BYTES = 150_000;
 
@@ -74,11 +78,17 @@ async function guestReply(
       { role: "USER", content: text },
     ]),
     maxOutputTokens: MAX_OUTPUT_TOKENS,
+    maxRetries: MODEL_MAX_RETRIES,
     abortSignal: request.signal,
   });
   return createTextStreamResponse({
     headers,
-    stream: toTextStream({ stream: result.stream }),
+    stream: withFallback(
+      toTextStream({ stream: result.stream }),
+      request.signal,
+      FALLBACK_REPLY,
+      async () => {},
+    ),
   });
 }
 
@@ -174,13 +184,19 @@ export async function POST(request: Request) {
       instructions: SYSTEM_PROMPT,
       messages: toModelMessages(history),
       maxOutputTokens: MAX_OUTPUT_TOKENS,
+      maxRetries: MODEL_MAX_RETRIES,
       abortSignal: request.signal,
       onEnd: ({ text: reply }) => saveReply(reply),
     });
 
     return createTextStreamResponse({
       headers: { "X-Message-Id": assistantId },
-      stream: toTextStream({ stream: result.stream }),
+      stream: withFallback(
+        toTextStream({ stream: result.stream }),
+        request.signal,
+        FALLBACK_REPLY,
+        saveReply,
+      ),
     });
   } catch (error) {
     console.error(error);
