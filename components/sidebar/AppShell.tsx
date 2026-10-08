@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Menu } from "lucide-react";
-import Logo from "@/components/layout/Logo";
 import Sidebar from "@/components/sidebar/Sidebar";
 import { MOCK_CHATS, type Chat } from "@/lib/mock-chats";
 
@@ -83,7 +82,6 @@ export default function AppShell({ navbar, children }: AppShellProps) {
           >
             <Menu className="h-5 w-5" />
           </button>
-          <Logo className="h-7 w-7 shrink-0" />
           <span className="text-lg font-semibold">Promptly</span>
         </div>
         <main className="min-h-0 flex-1 overflow-y-auto">{children}</main>

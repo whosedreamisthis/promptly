@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useUser } from "@clerk/nextjs";
+import { Show, UserButton } from "@clerk/nextjs";
 import {
   BookOpen,
   BookPlus,
@@ -43,7 +43,7 @@ function pinnedFirst<T extends { pinned?: boolean }>(items: T[]): T[] {
 }
 
 const ICON_BUTTON =
-  "flex h-9 w-9 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-[#EFE8F6] focus-visible:outline-2 focus-visible:outline-pastel-mint";
+  "flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors hover:bg-[#EFE8F6] focus-visible:outline-2 focus-visible:outline-pastel-mint";
 
 export default function Sidebar({
   chats,
@@ -57,7 +57,6 @@ export default function Sidebar({
   onTogglePinChat,
   onDeleteChat,
 }: SidebarProps) {
-  const { user } = useUser();
   const [query, setQuery] = useState("");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [notebooks, setNotebooks] = useState<Notebook[]>(MOCK_NOTEBOOKS);
@@ -299,24 +298,29 @@ export default function Sidebar({
         </nav>
 
         <div className="mt-auto flex shrink-0 items-center gap-2 border-t border-surface-border p-3">
-          {user?.imageUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={user.imageUrl}
-              alt=""
-              className="h-9 w-9 shrink-0 rounded-full"
-            />
-          ) : (
+          <Show when="signed-in">
+            <div className="min-w-0 flex-1">
+              <UserButton
+                showName
+                appearance={{
+                  elements: {
+                    userButtonBox: "!flex-row !justify-start gap-2",
+                    userButtonAvatarBox: "!order-first",
+                    userButtonOuterIdentifier:
+                      "!order-last truncate text-sm font-medium text-foreground",
+                    userButtonTrigger:
+                      "w-full justify-start rounded-md p-1 hover:bg-[#EFE8F6] focus:shadow-none",
+                  },
+                }}
+              />
+            </div>
+          </Show>
+          <Show when="signed-out">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-pastel-lavender">
               <User className="h-5 w-5" />
             </span>
-          )}
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium">
-              {user?.fullName ?? user?.firstName ?? "Guest"}
-            </p>
-            <p className="truncate text-xs text-stone-500">Free Tier</p>
-          </div>
+            <p className="min-w-0 flex-1 truncate text-sm font-medium">Guest</p>
+          </Show>
           <button
             type="button"
             aria-label="Settings"
