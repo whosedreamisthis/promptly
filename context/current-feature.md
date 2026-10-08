@@ -27,3 +27,5 @@ Completed
 - **Chat Pages:** Adds `/chats/[chatId]` pages with shared chat state, a pre-generated id on `/`, and New chat creating and opening a chat; key files `components/chat/ChatsProvider.tsx`, `app/chats/[chatId]/page.tsx`.
 - **shadcn/ui Migration:** Sets up shadcn/ui with the pastel theme and replaces hand-built menus, dialog, collapsibles, buttons, inputs and badges; key files `components/ui/`, `components.json`, `lib/utils.ts`.
 - **Database Persistence:** Stores users, notebooks, chats and messages in Neon Postgres via Prisma, with Clerk-scoped server actions and a database-backed sidebar; key files `prisma/schema.prisma`, `actions/chats.ts`, `components/chat/ChatsProvider.tsx`.
+- **Notebook Pages:** Adds `/notebooks/[notebookId]` pages opened from the sidebar, with a past chats list, a chat input and a breadcrumb back from notebook chats; key files `components/notebook/NotebookView.tsx`, `components/sidebar/RoutedSidebar.tsx`, `components/chat/ChatView.tsx`.
+- **Database Error Handling:** Retries the chats query when Neon is unreachable and shows a branded error page instead of crashing; key files `lib/chats-data.ts`, `app/global-error.tsx`.
