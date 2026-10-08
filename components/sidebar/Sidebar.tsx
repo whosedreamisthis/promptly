@@ -45,8 +45,15 @@ export default function Sidebar({
   onDeleteChat,
   onDeleteNotebook,
 }: SidebarProps) {
-  const { chats, notebooks, renameChat, renameNotebook, createNotebook } =
-    useChats();
+  const {
+    chats,
+    notebooks,
+    renameChat,
+    renameNotebook,
+    createNotebook,
+    togglePinChat,
+    togglePinNotebook,
+  } = useChats();
   const { renamingId, setRenamingId, chatActions, notebookActions } =
     useSidebarMenus({ onDeleteChat, onDeleteNotebook });
   const [query, setQuery] = useState("");
@@ -141,6 +148,7 @@ export default function Sidebar({
                 renaming={renamingId === notebook.id}
                 actions={notebookActions(notebook)}
                 onSelect={() => handleSelectNotebook(notebook.id)}
+                onTogglePin={() => togglePinNotebook(notebook.id)}
                 onRename={(title) => {
                   renameNotebook(notebook.id, title);
                   setRenamingId(null);
@@ -165,6 +173,7 @@ export default function Sidebar({
                   renaming={renamingId === chat.id}
                   actions={chatActions(chat)}
                   onSelect={() => handleSelectChat(chat.id)}
+                  onTogglePin={() => togglePinChat(chat.id)}
                   onRename={(title) => {
                     renameChat(chat.id, title);
                     setRenamingId(null);

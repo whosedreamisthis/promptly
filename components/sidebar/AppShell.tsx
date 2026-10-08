@@ -64,7 +64,7 @@ export default function AppShell({ navbar, children }: AppShellProps) {
         </div>
         <Show when="signed-in">
           <div
-            className={`absolute bottom-3 left-3 z-10 flex h-9 items-center transition-[opacity,visibility] ease-in-out ${
+            className={`absolute bottom-4 left-3 z-10 flex h-11.5 items-center transition-[opacity,visibility] ease-in-out ${
               closed
                 ? "visible opacity-100 delay-[250ms] duration-500"
                 : "invisible opacity-0 duration-150 max-md:visible max-md:opacity-100"

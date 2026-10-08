@@ -14,6 +14,7 @@ interface SidebarItemProps {
   renaming: boolean;
   actions: MenuAction[];
   onSelect: () => void;
+  onTogglePin: () => void;
   onRename: (title: string) => void;
   onCancelRename: () => void;
 }
@@ -26,6 +27,7 @@ export default function SidebarItem({
   renaming,
   actions,
   onSelect,
+  onTogglePin,
   onRename,
   onCancelRename,
 }: SidebarItemProps) {
@@ -62,7 +64,15 @@ export default function SidebarItem({
         </Button>
       )}
       {pinned && !renaming && (
-        <Pin aria-label="Pinned" className="mr-1 h-4 w-4 shrink-0" />
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label={`Unpin ${label}`}
+          onClick={onTogglePin}
+          className="shrink-0"
+        >
+          <Pin className="h-4 w-4" />
+        </Button>
       )}
       <ActionsMenu
         label={`Options for ${label}`}
