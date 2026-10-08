@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { auth, db } = vi.hoisted(() => ({
+const { auth, db, generateText } = vi.hoisted(() => ({
   auth: vi.fn(),
+  generateText: vi.fn(),
   db: {
     user: { upsert: vi.fn() },
     chat: {
@@ -18,10 +19,12 @@ const { auth, db } = vi.hoisted(() => ({
 
 vi.mock("@clerk/nextjs/server", () => ({ auth }));
 vi.mock("@/lib/db", () => ({ db }));
+vi.mock("ai", () => ({ generateText }));
 
 import {
   autoTitleChat,
   createChat,
+  generateChatTitle,
   moveChatToNotebook,
   renameChat,
   togglePinChat,
@@ -128,5 +131,70 @@ describe("chat actions", () => {
     const result = await renameChat({ chatId: "c1", title: "Hi" });
     expect(result.success).toBe(false);
     expect(result.error).not.toContain("boom");
+  });
+});
+
+describe("generateChatTitle", () => {
+  const exchange = [
+    { role: "USER", content: "How do I deploy to Vercel?" },
+    { role: "ASSISTANT", content: "Push your repo and import it." },
+  ];
+
+  beforeEach(() => {
+    auth.mockResolvedValue({ userId: "user_1" });
+    db.chat.findFirst.mockResolvedValue({ messages: exchange });
+    generateText.mockResolvedValue({ text: '"Deploying To Vercel."' });
+    db.chat.updateMany.mockResolvedValue({ count: 1 });
+  });
+
+  it("rejects calls without a session", async () => {
+    auth.mockResolvedValue({ userId: null });
+    const result = await generateChatTitle({ chatId: "c1" });
+    expect(result.success).toBe(false);
+    expect(generateText).not.toHaveBeenCalled();
+  });
+
+  it("saves a cleaned title only while the title is not custom", async () => {
+    const result = await generateChatTitle({ chatId: "c1" });
+    expect(result).toMatchObject({
+      success: true,
+      data: { title: "Deploying To Vercel" },
+    });
+    expect(db.chat.updateMany).toHaveBeenCalledWith({
+      where: { id: "c1", userId: "user_1", isCustomTitle: false },
+      data: { title: "Deploying To Vercel" },
+    });
+  });
+
+  it("skips custom-titled or unknown chats without calling the model", async () => {
+    db.chat.findFirst.mockResolvedValue(null);
+    const result = await generateChatTitle({ chatId: "c1" });
+    expect(result).toMatchObject({ success: true, data: { title: null } });
+    expect(generateText).not.toHaveBeenCalled();
+  });
+
+  it("returns no title when the chat has no reply yet", async () => {
+    db.chat.findFirst.mockResolvedValue({ messages: [exchange[0]] });
+    const result = await generateChatTitle({ chatId: "c1" });
+    expect(result).toMatchObject({ data: { title: null } });
+    expect(generateText).not.toHaveBeenCalled();
+  });
+
+  it("skips the model when USE_AI_MODEL is false", async () => {
+    vi.stubEnv("USE_AI_MODEL", "false");
+    const result = await generateChatTitle({ chatId: "c1" });
+    expect(result).toMatchObject({ success: true, data: { title: null } });
+    expect(generateText).not.toHaveBeenCalled();
+  });
+
+  it("keeps the current title when the model fails or the chat was renamed meanwhile", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    generateText.mockRejectedValue(new Error("quota"));
+    const failed = await generateChatTitle({ chatId: "c1" });
+    expect(failed).toMatchObject({ success: true, data: { title: null } });
+    generateText.mockResolvedValue({ text: "Fresh Title" });
+    db.chat.updateMany.mockResolvedValue({ count: 0 });
+    const renamed = await generateChatTitle({ chatId: "c1" });
+    expect(renamed).toMatchObject({ data: { title: null } });
   });
 });

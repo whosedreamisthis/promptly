@@ -50,6 +50,10 @@ We will create a new branch for every feature/fix. Name branch **feature/[featur
 - Don't keep trying random fixes
 - Ask for clarification if requirements are unclear
 
+## Commands
+
+- The shell already starts in the project directory, so never prefix commands with `cd <project path> &&`
+
 ## Code Changes
 
 - Make minimal changes to accomplish the task

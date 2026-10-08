@@ -1,0 +1,38 @@
+import { describe, expect, it } from "vitest";
+import {
+  chatRequestSchema,
+  MAX_MESSAGE_LENGTH,
+} from "@/lib/validations/messages";
+
+const valid = { chatId: "c1", messageId: "m1", text: "Hello" };
+
+describe("chatRequestSchema", () => {
+  it("accepts a valid request and trims the text", () => {
+    const result = chatRequestSchema.safeParse({ ...valid, text: "  Hello  " });
+    expect(result.success && result.data.text).toBe("Hello");
+  });
+
+  it("accepts text at the length limit and rejects longer text", () => {
+    const atLimit = "a".repeat(MAX_MESSAGE_LENGTH);
+    expect(
+      chatRequestSchema.safeParse({ ...valid, text: atLimit }).success,
+    ).toBe(true);
+    expect(
+      chatRequestSchema.safeParse({ ...valid, text: `${atLimit}a` }).success,
+    ).toBe(false);
+  });
+
+  it("rejects empty text and missing or oversized ids", () => {
+    expect(chatRequestSchema.safeParse({ ...valid, text: "   " }).success).toBe(
+      false,
+    );
+    expect(chatRequestSchema.safeParse({ ...valid, chatId: "" }).success).toBe(
+      false,
+    );
+    expect(
+      chatRequestSchema.safeParse({ ...valid, messageId: "x".repeat(65) })
+        .success,
+    ).toBe(false);
+    expect(chatRequestSchema.safeParse({ chatId: "c1" }).success).toBe(false);
+  });
+});

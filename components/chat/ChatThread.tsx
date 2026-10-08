@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { FileText } from "lucide-react";
+import ChatMarkdown from "@/components/chat/ChatMarkdown";
 import { Badge } from "@/components/ui/badge";
 
 export interface ChatMessage {
@@ -13,6 +14,22 @@ export interface ChatMessage {
 
 interface ChatThreadProps {
   messages: ChatMessage[];
+}
+
+function ThinkingIndicator() {
+  return (
+    <div
+      role="status"
+      className="flex items-center gap-2 rounded-2xl border border-surface-border bg-surface-card px-4 py-3 text-sm text-muted-foreground"
+    >
+      <span className="flex gap-1" aria-hidden="true">
+        <span className="size-2 animate-bounce rounded-full bg-muted-foreground/60" />
+        <span className="size-2 animate-bounce rounded-full bg-muted-foreground/60 [animation-delay:150ms]" />
+        <span className="size-2 animate-bounce rounded-full bg-muted-foreground/60 [animation-delay:300ms]" />
+      </span>
+      Promptly is thinking...
+    </div>
+  );
 }
 
 export default function ChatThread({ messages }: ChatThreadProps) {
@@ -46,16 +63,21 @@ export default function ChatThread({ messages }: ChatThreadProps) {
                 ))}
               </ul>
             )}
+            {!isUser && !message.text && <ThinkingIndicator />}
             {message.text && (
-              <p
-                className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-4 py-2 text-base ${
+              <div
+                className={`max-w-[85%] rounded-2xl px-4 py-2 text-base ${
                   isUser
-                    ? "bg-pastel-lavender"
+                    ? "whitespace-pre-wrap bg-pastel-lavender"
                     : "border border-surface-border bg-surface-card"
                 }`}
               >
-                {message.text}
-              </p>
+                {isUser ? (
+                  message.text
+                ) : (
+                  <ChatMarkdown>{message.text}</ChatMarkdown>
+                )}
+              </div>
             )}
           </div>
         );

@@ -8,3 +8,9 @@ export const addMessageSchema = z.object({
   role: z.enum(["USER", "ASSISTANT"]),
   content: z.string().trim().min(1).max(MAX_MESSAGE_LENGTH),
 });
+
+export const chatRequestSchema = z.object({
+  chatId: z.string().min(1).max(64),
+  messageId: z.string().min(1).max(64),
+  text: z.string().trim().min(1).max(MAX_MESSAGE_LENGTH),
+});

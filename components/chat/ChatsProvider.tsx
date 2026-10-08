@@ -4,13 +4,13 @@ import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   autoTitleChat,
+  generateChatTitle,
   createChat as createChatAction,
   deleteChat as deleteChatAction,
   moveChatToNotebook as moveChatAction,
   renameChat as renameChatAction,
   togglePinChat as togglePinChatAction,
 } from "@/actions/chats";
-import { addMessage as addMessageAction } from "@/actions/messages";
 import {
   createNotebook as createNotebookAction,
   deleteNotebook as deleteNotebookAction,
@@ -27,11 +27,9 @@ import {
   type Notebook,
 } from "@/types/chats";
 
-const MOCK_REPLY =
-  "This is a placeholder reply. The Promptly AI backend isn't connected yet, so I can't answer for real, but your message and attachments came through fine.";
-const STREAM_INTERVAL_MS = 40;
 const TITLE_MAX_LENGTH = 40;
 const NEW_NOTEBOOK_TITLE = "Untitled notebook";
+const STREAM_ERROR = "Something went wrong. Please try again.";
 
 interface ChatsContextValue {
   chats: Chat[];
@@ -96,26 +94,21 @@ export default function ChatsProvider({
   children,
 }: ChatsProviderProps) {
   const [chats, setChats] = useState<Chat[]>(initialData.chats);
-  const [notebooks, setNotebooks] = useState<Notebook[]>(
-    initialData.notebooks,
-  );
+  const [notebooks, setNotebooks] = useState<Notebook[]>(initialData.notebooks);
   const [messagesByChat, setMessagesByChat] = useState<
     Record<string, ChatMessage[]>
   >({});
   const [streamingChatIds, setStreamingChatIds] = useState<string[]>([]);
-  const timersRef = useRef<Map<string, ReturnType<typeof setInterval>>>(
-    new Map(),
-  );
+  const controllersRef = useRef<Map<string, AbortController>>(new Map());
 
   useEffect(() => {
-    const timers = timersRef.current;
-    return () => timers.forEach((timer) => clearInterval(timer));
+    const controllers = controllersRef.current;
+    return () => controllers.forEach((controller) => controller.abort());
   }, []);
 
   const stopStreaming = (chatId: string) => {
-    const timer = timersRef.current.get(chatId);
-    if (timer) clearInterval(timer);
-    timersRef.current.delete(chatId);
+    controllersRef.current.get(chatId)?.abort();
+    controllersRef.current.delete(chatId);
     setStreamingChatIds((prev) => prev.filter((id) => id !== chatId));
   };
 
@@ -132,42 +125,86 @@ export default function ChatsProvider({
     );
   };
 
-  const saveMessage = (
+  const updateMessage = (
     chatId: string,
     id: string,
-    role: "USER" | "ASSISTANT",
-    content: string,
+    changes: Partial<ChatMessage>,
   ) => {
-    if (!content.trim()) return;
-    void persist(addMessageAction({ id, chatId, role, content }), () => {});
+    setMessagesByChat((prev) => ({
+      ...prev,
+      [chatId]: (prev[chatId] ?? []).map((message) =>
+        message.id === id ? { ...message, ...changes } : message,
+      ),
+    }));
   };
 
-  const streamReply = (chatId: string) => {
-    const words = MOCK_REPLY.split(" ");
-    const messageId = crypto.randomUUID();
-    let count = 0;
+  const dropMessage = (chatId: string, id: string) => {
+    setMessagesByChat((prev) => ({
+      ...prev,
+      [chatId]: (prev[chatId] ?? []).filter((message) => message.id !== id),
+    }));
+  };
+
+  const applyGeneratedTitle = async (chatId: string) => {
+    const result = await generateChatTitle({ chatId });
+    if (result.success && result.data.title) {
+      updateChat(chatId, { title: result.data.title });
+    }
+  };
+
+  /** Streams the reply from the chat route; the server saves both messages. */
+  const streamReply = async (
+    chatId: string,
+    messageId: string,
+    text: string,
+    isFirstTurn: boolean,
+  ) => {
+    const controller = new AbortController();
+    controllersRef.current.set(chatId, controller);
     setStreamingChatIds((prev) => [...prev, chatId]);
+    const placeholderId = crypto.randomUUID();
     addMessage(chatId, {
-      id: messageId,
+      id: placeholderId,
       role: "assistant",
       text: "",
       fileNames: [],
     });
-    const timer = setInterval(() => {
-      count += 1;
-      const text = words.slice(0, count).join(" ");
-      setMessagesByChat((prev) => ({
-        ...prev,
-        [chatId]: (prev[chatId] ?? []).map((message) =>
-          message.id === messageId ? { ...message, text } : message,
-        ),
-      }));
-      if (count >= words.length) {
-        stopStreaming(chatId);
-        saveMessage(chatId, messageId, "ASSISTANT", MOCK_REPLY);
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chatId, messageId, text }),
+        signal: controller.signal,
+      });
+      if (!response.ok || !response.body) {
+        const body = (await response.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        throw new Error(body?.error ?? STREAM_ERROR);
       }
-    }, STREAM_INTERVAL_MS);
-    timersRef.current.set(chatId, timer);
+      const serverId = response.headers.get("X-Message-Id");
+      if (serverId) updateMessage(chatId, placeholderId, { id: serverId });
+      const id = serverId ?? placeholderId;
+      const reader = response.body
+        .pipeThrough(new TextDecoderStream())
+        .getReader();
+      let reply = "";
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        reply += value;
+        updateMessage(chatId, id, { text: reply });
+      }
+      if (isFirstTurn) void applyGeneratedTitle(chatId);
+    } catch (error) {
+      dropMessage(chatId, placeholderId);
+      if (!controller.signal.aborted) {
+        toast.error(error instanceof Error ? error.message : STREAM_ERROR);
+      }
+    } finally {
+      if (controllersRef.current.get(chatId) === controller)
+        stopStreaming(chatId);
+    }
   };
 
   const updateChat = (id: string, changes: Partial<Chat>) => {
@@ -208,6 +245,10 @@ export default function ChatsProvider({
   };
 
   const sendMessage = async (id: string, submission: ChatSubmission) => {
+    if (!submission.text) {
+      toast.error("Type a message to send with your files");
+      return null;
+    }
     const existing = chats.find((chat) => chat.id === id);
     const title = titleFor(submission);
     if (!existing) {
@@ -224,14 +265,14 @@ export default function ChatsProvider({
       void autoTitleChat({ chatId: id, title });
     }
     const messageId = crypto.randomUUID();
-    saveMessage(id, messageId, "USER", submission.text);
+    const isFirstTurn = (messagesByChat[id] ?? []).length === 0;
     addMessage(id, {
       id: messageId,
       role: "user",
       text: submission.text,
       fileNames: submission.files.map((file) => file.name),
     });
-    streamReply(id);
+    void streamReply(id, messageId, submission.text, isFirstTurn);
     return id;
   };
 

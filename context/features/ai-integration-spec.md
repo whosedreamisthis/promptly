@@ -1,153 +1,93 @@
-# Technical Specification: Gemini Integration & Auto-Renaming via Server Actions (`gemini-integration-spec.md`)
+# AI Integration Spec: Gemini Replies & Auto-Titles
 
-## 1. Architecture Overview
+Replaces the placeholder reply in `ChatsProvider` with real streamed Gemini responses, saves messages on the server, and generates chat titles after the first turn. Text only: attachments are a later feature.
 
-This specification details the server and client architecture required to connect the Next.js chat interface to Google's Gemini API strictly using **Next.js Server Actions** (and the `ai/rsc` or AI SDK streamable UI / text stream patterns) rather than traditional `/api/chat` REST routes.
+## 1. Decisions
 
-It handles real-time response streaming, database state persistence, multimodal input (files), and background chat renaming after the initial message turn.
+- **Streaming uses an API route**, not a server action. `context/coding-standards.md` reserves API routes for long-running operations, and server-action streams (`@ai-sdk/rsc`, experimental) cannot be cancelled.
+- **The server saves messages.** The route saves the user message before streaming and the assistant message when it finishes. The client no longer calls `addMessage`.
+- **Titles use a server action** (`generateChatTitle`), called by the client after the first reply. It returns the title so `ChatsProvider` state can be updated; `revalidatePath` would not update that state.
+- **Packages to install:** `ai` and `@ai-sdk/google`. Check the installed major version's docs for the text-stream response helper before coding.
+- **Key:** `GEMINI_API_KEY` (already in `.env.example`). The Google provider reads `GOOGLE_GENERATIVE_AI_API_KEY` by default, so pass `createGoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY })`. Add the variable to Vercel for production.
+- **Model:** `gemini-3.8-flash` for replies and titles (`gemini-2.5-flash` is no longer available to new API users), defined once as `GEMINI_MODEL` in `lib/ai.ts`.
 
-there is a GEMINI_API_KEY defined in .env
+## 2. Files
 
----
+| File                                | Purpose                                                                                   |
+| :---------------------------------- | :---------------------------------------------------------------------------------------- |
+| `app/api/chat/route.ts`             | `POST` streaming endpoint                                                                 |
+| `lib/ai.ts`                         | Provider, model, system prompt, history mapping, title cleanup                            |
+| `lib/validations/messages.ts`       | Add `chatRequestSchema`                                                                   |
+| `actions/chats.ts`                  | Add `generateChatTitle`                                                                   |
+| `components/chat/ChatsProvider.tsx` | Call the route, read the stream, remove client-side message saving and the mock reply     |
+| `actions/messages.ts`               | Delete `addMessage` and its tests (the route owns saving)                                 |
 
-## 2. Server Actions Architecture
+## 3. Chat Route: `POST /api/chat`
 
-Instead of HTTP route handlers, all communication logic is encapsulated in type-safe Server Actions located under `app/actions/chat.ts`.
+**Request:** `{ chatId: string, messageId: string, text: string }`. `chatRequestSchema` (Zod): ids 1 to 64 chars, `text` trimmed, 1 to `MAX_MESSAGE_LENGTH` (10,000). Invalid input returns 400.
 
-### 2.1 Primary Action: `streamChatResponse`
+**Steps:**
 
-Handles message ingestion, database persistence, streaming Gemini completion back to the client, and triggering the title generation lifecycle.
+1. `ensureUser()` from `lib/session.ts`; no session returns 401.
+2. Load the chat with `where: { id: chatId, userId }`; not found returns 404.
+3. Create the user `Message` (`id: messageId`, role `USER`).
+4. Load history: the chat's last 30 messages by `createdAt asc` (includes the new one), mapped by `lib/ai.ts` to `{ role: "user" | "assistant", content }`.
+5. `streamText` with `GEMINI_MODEL`, the system prompt, the history and `maxOutputTokens: 2000`, so replies stay under the 10,000 character message limit.
+6. Return a plain text stream response with the header `X-Message-Id: <new assistant message id>`.
+7. In `onFinish`, save the assistant `Message` with that id and the text (trimmed, sliced to `MAX_MESSAGE_LENGTH`), and set the chat's `updatedAt`. Skip saving empty text.
 
-- **Execution Context:** `"use server"` module.
-- **Model Target:** `gemini-2.5-flash` (or `gemini-1.5-flash`) via `@ai-sdk/google`.
-- **Signature:**
-  ```typescript
-  export async function streamChatResponse(payload: {
-    chatId: string;
-    userPrompt: string;
-    attachments?: Array<{ name: string; type: string; urlOrBase64: string }>;
-  }): Promise<{
-    messageStream: ReturnType<typeof createStreamableValue>;
-  }>;
-  ```
+**Other rules:**
 
-#### Implementation Lifecycle Pipeline:
+- `export const maxDuration = 60`.
+- Pass `req.signal` as `abortSignal` so cancelling the request stops generation. If the client aborts, partial text is not saved.
+- Errors are logged and return a 500 JSON `{ error: "Something went wrong. Please try again." }`.
+- A user message may be left without a reply if generation fails. Consecutive user messages in history are allowed.
 
-1. **Authentication & Validation:**
-   - Extract current authenticated user session.
-   - Validate session ownership for `chatId`.
-2. **User Message Persistence:**
-   - Write user prompt and attachment references to the database under `chatId`.
-3. **Stream Initiation:**
-   - Initialize a `createStreamableValue` object from the `ai/rsc` package (or `readStreamableValue`).
-   - Invoke `streamText()` targeting Gemini with message history + system instructions.
-4. **Stream Consumption & Persistence:**
-   - Pipe model text chunks directly to the streamable value for client UI consumption.
-   - On completion (`onFinish` or stream resolution), persist the final assistant response text to the database.
-5. **Turn 1 Check & Rename Trigger:**
-   - Query database to check if `chat.title === "New Chat"` and `chat.isCustomTitle === false`.
-   - If true, non-blocking asynchronous dispatch of `generateChatTitleAction({ chatId, userPrompt, assistantResponse })`.
+**System prompt (in `lib/ai.ts`):** a short assistant persona: friendly, concise, replies of three paragraphs or fewer, uses markdown only when it helps, asks a question when a request is unclear. No user data is placed in it.
 
----
+## 4. Title Action: `generateChatTitle`
 
-### 2.2 Background Action: `generateChatTitleAction`
+`generateChatTitle({ chatId })` in `actions/chats.ts`, through `runAction` (Clerk session, Zod `chatIdSchema`, `{ success, data, error }`).
 
-Generates a short, contextually relevant chat title after the first turn completes.
+1. Find the chat for the user where `isCustomTitle` is false; otherwise return `ok({ title: null })`.
+2. Read its first user message and first assistant message.
+3. `generateText` with `GEMINI_MODEL` and this prompt: _"Write a title of 3 to 5 words in title case for this conversation. Return only the title, with no quotes, punctuation, markdown or prefix.\n\nUser: {user}\nAssistant: {assistant}"_ (each message sliced to 500 characters).
+4. `cleanTitle()` in `lib/ai.ts`: strip quotes, markdown, a `Title:` prefix and trailing punctuation, collapse whitespace, cut to 60 characters. An empty result counts as failure.
+5. `updateMany({ where: { id: chatId, userId, isCustomTitle: false }, data: { title } })`, so a manual rename made during generation is never overwritten.
+6. Return `ok({ title })`. On any failure return `ok({ title: null })` and keep the existing title, which is already the first message's text (set by `sendMessage`).
 
-- **Execution Context:** `"use server"` module (triggered server-side asynchronously).
-- **Model Target:** `gemini-2.5-flash` (optimized for fast zero-shot headline generation).
-- **Signature:**
-  ```typescript
-  export async function generateChatTitleAction(payload: {
-    chatId: string;
-    userPrompt: string;
-    assistantResponse: string;
-  }): Promise<{ success: boolean; title?: string }>;
-  ```
-- **Prompt Instructions:**
+Manual rename keeps using the existing `renameChat` action.
 
-  ```text
-  You are an expert at creating concise titles for chat threads.
-  Summarize the initial interaction below into a clean, title-case headline of 3 to 5 words.
-  Do NOT use quotation marks, punctuation, markdown formatting, or prefixes like "Title:".
-  Return ONLY the plain text string.
+## 5. Client: `ChatsProvider.sendMessage`
 
-  User Message: <userPrompt>
-  Assistant Response: <assistantResponse>
-  ```
+1. Create the chat first if it is new (unchanged), then add the user message locally.
+2. Add an empty assistant message and mark the chat as streaming.
+3. `fetch("/api/chat", { method: "POST", body, signal })` using an `AbortController` stored per chat in a ref (replacing the `timersRef` interval).
+4. Read `response.body` with a `TextDecoder`, appending each chunk to the assistant message text. Use the `X-Message-Id` header as the assistant message id.
+5. When the stream ends, stop streaming. If this was the chat's first turn (it had no messages before), call `generateChatTitle` and update the title in state when it returns one.
+6. On a non-OK response or a network error: remove the empty assistant message and show `toast.error`. The user message stays.
+7. Deleting a chat aborts its request. Unmounting the provider aborts all.
 
-- **Post-Processing & State Sync:**
-  1. Trim and sanitize output.
-  2. Database update: `UPDATE Chat SET title = :generatedTitle WHERE id = :chatId AND isCustomTitle = false`.
-  3. Call Next.js `revalidatePath('/')` or `revalidateTag(`chat-list-${userId}`)` to trigger server-driven UI updates across the sidebar.
+The input stays disabled while a chat is streaming (unchanged). Attached files are still shown but are not sent to the model.
 
----
+## 6. Edge Cases
 
-### 2.3 User Rename Action: `updateChatTitleAction`
+| Scenario                                | Handling                                                                                  |
+| :-------------------------------------- | :---------------------------------------------------------------------------------------- |
+| Navigate to another chat while streaming | The stream continues; state lives in the layout-level provider.                          |
+| Reload while streaming                  | Request is cancelled, the user message is saved, no assistant message is saved.          |
+| Rename while the title is generating    | `isCustomTitle: true` makes the `updateMany` match nothing.                              |
+| Gemini error or quota exceeded          | 500 from the route, toast, no partial assistant message.                                 |
+| Title generation fails                  | Keep the first-message title.                                                            |
+| Reply hits the output cap               | The reply is saved as streamed; no continuation.                                         |
 
-Handles explicit manual user renames from the sidebar or header.
+## 7. Tests (Vitest, no network)
 
-- **Signature:**
-  ```typescript
-  export async function updateChatTitleAction(chatId: string, newTitle: string);
-  ```
-- **Behavior:** Updates database record and explicitly sets `isCustomTitle = true`. This locks the chat title and prevents `generateChatTitleAction` from overwriting it.
+- `lib/ai.test.ts`: `cleanTitle` (quotes, `Title:` prefix, markdown, length, empty) and the history mapping (roles, 30-message cap).
+- `actions/chats.test.ts`: `generateChatTitle` with `generateText` mocked: happy path, no session, custom title skipped, unknown chat, model failure keeps the title, `updateMany` always filters `isCustomTitle: false`.
+- Remove `actions/messages.test.ts` with the action it covers.
+- The route is not unit tested (project standard); verify it in the browser.
 
----
+## 8. Not in Scope
 
-## 3. Client Interaction Lifecycle
-
-### 3.1 Client State Machine
-
-```
-┌──────────────────────────────────────────┐
-│             New Chat State               │
-│  - User enters prompt & attaches files   │
-│  - Clicks Send / Presses Enter           │
-└────────────────────┬─────────────────────┘
-                     │
-                     ▼
-┌──────────────────────────────────────────┐
-│      Execute Server Action               │
-│  - Calls `streamChatResponse()`          │
-│  - Obtains `streamableValue` handle      │
-└────────────────────┬─────────────────────┘
-                     │
-                     ▼
-┌──────────────────────────────────────────┐
-│         Streaming Active Chat            │
-│  - Client iterates over stream reader    │
-│  - UI updates message text in real-time  │
-└────────────────────┬─────────────────────┘
-                     │
-                     ▼
-┌──────────────────────────────────────────┐
-│         First Turn Complete              │
-│  - Assistant stream completes            │
-│  - Server fires `generateChatTitleAction`│
-│  - `revalidatePath()` updates sidebar    │
-└──────────────────────────────────────────┘
-```
-
----
-
-## 4. Multimodal Payload Handling (Files via Server Actions)
-
-1. **Client Processing:**
-   - Files selected via the `+` button are converted to Base64 data strings or pre-uploaded via a direct storage upload action (e.g., Vercel Blob / S3).
-2. **Server Action Ingestion:**
-   - Pass Base64 data or media URLs directly into the `streamChatResponse` Server Action payload.
-   - Construct Gemini-compliant multimodal content parts (`{ inlineData: { mimeType, data } }`) for prompt context.
-3. **Fallback Naming:**
-   - If the first user turn consists strictly of an uploaded image/document without prompt text, `generateChatTitleAction` uses the filename and visual/text contents of the attachment as summarization context (e.g., `"Receipt Analysis"` or `"PDF Summary"`).
-
----
-
-## 5. Error Handling & Edge Cases
-
-| Scenario                                 | Handling Strategy                                                                                                                              |
-| :--------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Server Action Streaming Interruption** | Stream reader catches error; client UI renders an inline "Retry" button that re-executes the Server Action for the turn.                       |
-| **Title Generation Model Timeout**       | Catch error gracefully on the server; fall back to extracting the first 30 characters of `userPrompt` + `"..."` as the title.                  |
-| **User Manual Rename During Stream**     | Executes `updateChatTitleAction(chatId, newTitle)`. `isCustomTitle = true` ensures any in-flight title generation worker will abort DB update. |
-| **Route Navigation During Stream**       | Next.js Server Actions execute independently on the server; navigated client route smoothly attaches to the updated DB thread state.           |
+Attachments and file understanding, model switching, regenerate and edit, conversation memory beyond the last 30 messages, token usage tracking.
