@@ -20,7 +20,7 @@ const MAX_ATTEMPTS = 3;
 const RETRY_DELAY_MS = 1500;
 
 /** Retries only when the database is unreachable, e.g. while a Neon compute wakes from scale-to-zero. */
-async function withDbRetry<T>(operation: () => Promise<T>): Promise<T> {
+export async function withDbRetry<T>(operation: () => Promise<T>): Promise<T> {
   for (let attempt = 1; ; attempt++) {
     try {
       return await operation();

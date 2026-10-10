@@ -20,6 +20,7 @@ model User {
 
   notebooks Notebook[]
   chats     Chat[]
+  prompts   Prompt[]
 }
 
 model Notebook {
@@ -65,6 +66,21 @@ model Message {
   attachments Attachment[]
 
   @@index([chatId, createdAt])
+}
+
+model Prompt {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String
+  description String   @default("")
+  content     String   @db.Text
+  category    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, updatedAt])
 }
 
 model Attachment {

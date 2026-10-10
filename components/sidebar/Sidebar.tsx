@@ -1,7 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { BookOpen, MessageSquare, Plus, Search, SquarePen } from "lucide-react";
+import {
+  BookOpen,
+  MessageSquare,
+  Plus,
+  Search,
+  Sparkles,
+  SquarePen,
+} from "lucide-react";
 import { useChats } from "@/components/chat/ChatsProvider";
 import ConfirmDeleteDialog from "@/components/chat/ConfirmDeleteDialog";
 import { Button } from "@/components/ui/button";
@@ -21,10 +28,12 @@ import { cn } from "@/lib/utils";
 interface SidebarProps {
   activeChatId: string | null;
   activeNotebookId: string | null;
+  promptsActive: boolean;
   closed: boolean;
   mobileOpen: boolean;
   onClose: () => void;
   onNewChat: () => void;
+  onOpenPrompts: () => void;
   onSelectChat: (id: string) => void;
   onSelectNotebook: (id: string) => void;
   onDeleteChat: (id: string) => void;
@@ -38,10 +47,12 @@ function pinnedFirst<T extends { pinned?: boolean }>(items: T[]): T[] {
 export default function Sidebar({
   activeChatId,
   activeNotebookId,
+  promptsActive,
   closed,
   mobileOpen,
   onClose,
   onNewChat,
+  onOpenPrompts,
   onSelectChat,
   onSelectNotebook,
   onDeleteChat,
@@ -138,6 +149,21 @@ export default function Sidebar({
           onScroll={(event) => setScrolled(event.currentTarget.scrollTop > 0)}
           className="min-h-0 flex-1 overflow-y-auto px-3"
         >
+          <Button
+            variant="ghost"
+            className={cn(
+              "mt-1 h-10 w-full justify-start gap-3 pl-3",
+              promptsActive ? "bg-sidebar-accent font-semibold" : "font-normal",
+            )}
+            aria-current={promptsActive ? "page" : undefined}
+            onClick={() => {
+              onOpenPrompts();
+              onClose();
+            }}
+          >
+            <Sparkles className="size-5" />
+            Prompts
+          </Button>
           <SidebarSection title="Notebooks">
             <Button
               variant="ghost"

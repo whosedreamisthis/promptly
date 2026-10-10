@@ -11,7 +11,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-export type DeletableKind = "chat" | "notebook";
+export type DeletableKind = "chat" | "notebook" | "prompt";
 
 interface ConfirmDeleteDialogProps {
   open: boolean;
@@ -24,9 +24,10 @@ interface ConfirmDeleteDialogProps {
 const CONSEQUENCE: Record<DeletableKind, string> = {
   chat: "and its messages will be permanently deleted.",
   notebook: "will be deleted. Its chats are kept and will move to Recents.",
+  prompt: "will be permanently deleted.",
 };
 
-/** Asks before a chat or notebook is deleted; Cancel has focus first, so Enter never deletes by accident. */
+/** Asks before a chat, notebook or prompt is deleted; Cancel has focus first, so Enter never deletes by accident. */
 export default function ConfirmDeleteDialog({
   open,
   onOpenChange,

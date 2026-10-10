@@ -6,6 +6,7 @@ A chatbot web app with streaming Gemini replies, saved chats organised into note
 
 - **Streaming chat:** Gemini replies stream from `/api/chat`, rendered as markdown, with auto-generated chat titles and a mock mode that skips model calls.
 - **Chats and notebooks:** Chats and messages are saved per user in Postgres. Notebooks group related chats and have their own pages.
+- **Prompts library:** 12 starter prompts plus your own saved prompts at `/prompts`, with search and categories. Use fills the chat input of a new chat.
 - **Sidebar:** Search, new chat, pinned and recent chats, and rename, pin and delete menus with delete confirmation.
 - **Input extras:** File attachments and voice dictation.
 - **Guest chat:** Signed-out visitors can chat in memory without saving.
@@ -80,9 +81,9 @@ A chatbot web app with streaming Gemini replies, saved chats organised into note
 
 ## Project structure
 
-- `app/`: routes (`/`, `/chats/[chatId]`, `/notebooks/[notebookId]`, auth pages) and API routes (`/api/chat`, `/api/demo`)
-- `components/`: UI by feature (`chat`, `sidebar`, `notebook`, `layout`) and shadcn components in `ui/`
-- `actions/`: Server Actions for chats, messages and settings
+- `app/`: routes (`/`, `/chats/[chatId]`, `/notebooks/[notebookId]`, `/prompts`, auth pages) and API routes (`/api/chat`, `/api/demo`)
+- `components/`: UI by feature (`chat`, `sidebar`, `notebook`, `prompts`, `layout`) and shadcn components in `ui/`
+- `actions/`: Server Actions for chats, messages, prompts and settings
 - `lib/`: AI setup, rate limits, validation, database and helper code
 - `prisma/`: schema, migrations and seed data
 - `context/`: project specs, coding standards and feature history
