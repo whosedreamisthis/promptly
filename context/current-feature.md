@@ -1,29 +1,20 @@
-# Current Feature: Prompts Library
+# Current Feature
 
-A `/prompts` page with 12 starter prompts (defined in code) and the user's own saved prompts. Use fills the chat input of a new chat. Full spec: @context/features/prompts-library-spec.md
+<!-- Feature name and short description -->
 
 ## Status
 
-In Progress
+<!-- Not Started | In Progress | Completed -->
+
+Completed
 
 ## Goals
 
-- Add a `Prompt` model and migration, the five categories, and Zod schemas (title 1-60, description 0-120, content 1-10,000, max 100 per user)
-- Add the 12 starter prompts in `lib/starter-prompts.ts`, with a test that ids are unique and each passes validation
-- Add `actions/prompts.ts` (create, update, delete) with ownership checks, the 100 prompt limit and tests
-- Build the `/prompts` page: grid of cards, search, category chips, "Your prompts" and "Starter prompts" sections, preview dialog; guests see starters only
-- Add create, edit, duplicate ("Save a copy" for starters) and delete with confirmation; guests get the sign-in modal
-- Make Use fill the chat input of a new chat through a client-side draft context, without sending
-- Add a "Prompts" item to the sidebar
-- Update `README.md` (features list and project structure)
+<!-- Goals and requirements -->
 
 ## Notes
 
-- Starter prompts live in code, not the database; Use fills the input and never sends; the `/` slash picker is out of scope
-- Use shadcn components for all UI (Card, Dialog, AlertDialog, Select, DropdownMenu, Badge, Textarea); no new colors
-- Use `prisma migrate dev` against the `development` Neon branch only, never `production`
-- No new environment variables or scripts; demo cleanup needs no change because prompts cascade-delete with the user
-- Build order and key files are in the spec, sections 11 and 12
+<!-- Any extra notes -->
 
 ## Completed Features
 
@@ -56,3 +47,4 @@ In Progress
 - **Sidebar Empty Text Colour:** Uses the theme's muted text colour for the "No recent chats" line instead of a hard-coded grey; key file `components/sidebar/Sidebar.tsx`.
 - **Simplify Chat Code:** Splits the guest branch and shared helpers out of `ChatsProvider` and moves reply saving and body reading out of the chat route, with no behavior change; key files `components/chat/ChatsProvider.tsx`, `app/api/chat/route.ts`, `lib/save-chat-turn.ts`.
 - **Simplify More Chat Code:** Removes the duplicate `GuestHistory` type, shares the notebook ownership check in the chat actions, and names the repeated send condition in the chat input, with no behavior change; key files `actions/chats.ts`, `components/chat/useChatMessages.ts`, `components/chat/ChatInput.tsx`.
+- **Prompts Library:** Adds a `/prompts` page with 12 starter prompts and the user's own saved prompts, where Use fills the chat input of a new chat; key files `app/prompts/page.tsx`, `components/prompts/`, `actions/prompts.ts`.
