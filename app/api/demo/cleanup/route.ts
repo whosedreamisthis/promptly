@@ -39,6 +39,9 @@ export async function GET(request: Request) {
     const clerk = await clerkClient();
     const createdAtBefore = Date.now() - demoTtlMs();
     let deleted = 0;
+    let failed = 0;
+    // Users that stay in the list (not demo users, or failed deletions) are skipped on the next page.
+    let offset = 0;
 
     for (let page = 0; page < MAX_PAGES; page++) {
       const { data: users } = await clerk.users.getUserList({
@@ -46,23 +49,35 @@ export async function GET(request: Request) {
         createdAtBefore,
         orderBy: "+created_at",
         limit: PAGE_SIZE,
+        offset,
       });
-      const demoIds = users
-        .filter(isDemoUser)
-        .map((user) => user.id);
-      if (demoIds.length === 0) break;
+      const demoIds = users.filter(isDemoUser).map((user) => user.id);
+      let removed = 0;
 
-      // Database rows first: if Clerk fails below, the next run finds the user again.
-      await db.user.deleteMany({ where: { id: { in: demoIds } } });
-      const results = await Promise.allSettled(
-        demoIds.map((id) => clerk.users.deleteUser(id)),
-      );
-      const removed = results.filter((r) => r.status === "fulfilled").length;
+      if (demoIds.length > 0) {
+        // Database rows first: if Clerk fails below, the next run finds the user again.
+        await db.user.deleteMany({ where: { id: { in: demoIds } } });
+        const results = await Promise.allSettled(
+          demoIds.map((id) => clerk.users.deleteUser(id)),
+        );
+        for (const result of results) {
+          if (result.status === "rejected") console.error(result.reason);
+        }
+        removed = results.filter((r) => r.status === "fulfilled").length;
+        failed += demoIds.length - removed;
+      }
+
       deleted += removed;
-      if (removed === 0) break;
+      const lastPage = users.length < PAGE_SIZE;
+      const stuck = demoIds.length > 0 && removed === 0;
+      if (lastPage || stuck) break;
+      offset += users.length - removed;
     }
 
-    return Response.json({ success: true, deleted });
+    return Response.json(
+      { success: failed === 0, deleted, failed },
+      { status: failed === 0 ? 200 : 500 },
+    );
   } catch (error) {
     console.error(error);
     return Response.json({ error: "Cleanup failed" }, { status: 500 });

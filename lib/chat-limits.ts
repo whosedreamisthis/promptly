@@ -8,6 +8,9 @@ const MINUTE_LIMITS: Record<ChatCaller, number> = { guest: 10, user: 20 };
 const DEFAULT_DAILY_LIMIT = 10;
 const DEFAULT_GLOBAL_DAILY_LIMIT = 500;
 
+/** Limits that protect model spend: if Redis is down, replies switch to the sample reply instead of reaching the model. */
+export const MODEL_SPEND_OPTIONS = { failClosed: true } as const;
+
 /** Model-backed messages each person (guest or signed in) gets per day; set CHAT_DAILY_LIMIT=1 to test the limit. */
 function dailyLimit(): LimitSpec {
   return {
@@ -34,13 +37,17 @@ export function isBurstLimited(
 
 /** True once all callers together have used the day's model budget. */
 export function isModelBudgetSpent(): Promise<boolean> {
-  return checkLimit("model:global", {
-    limit: positiveIntFromEnv(
-      "GLOBAL_DAILY_MODEL_LIMIT",
-      DEFAULT_GLOBAL_DAILY_LIMIT,
-    ),
-    window: "1 d",
-  });
+  return checkLimit(
+    "model:global",
+    {
+      limit: positiveIntFromEnv(
+        "GLOBAL_DAILY_MODEL_LIMIT",
+        DEFAULT_GLOBAL_DAILY_LIMIT,
+      ),
+      window: "1 d",
+    },
+    MODEL_SPEND_OPTIONS,
+  );
 }
 
 export type ReplySource = "model" | "mock" | "limit";
@@ -54,7 +61,9 @@ export async function chooseReplySource(
   key: string,
 ): Promise<ReplySource> {
   if (!isAiEnabled()) return "mock";
-  if (await checkLimit(`chat:${caller}:${key}`, dailyLimit())) {
+  if (
+    await checkLimit(`chat:${caller}:${key}`, dailyLimit(), MODEL_SPEND_OPTIONS)
+  ) {
     return "limit";
   }
   return (await isModelBudgetSpent()) ? "limit" : "model";

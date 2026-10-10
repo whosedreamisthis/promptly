@@ -30,6 +30,11 @@ function user(
   };
 }
 
+/** A full Clerk page (100 users), which is how the route knows there may be more. */
+function fullPage(prefix: string, demo: boolean) {
+  return Array.from({ length: 100 }, (_, i) => user(`${prefix}_${i}`, demo));
+}
+
 beforeEach(() => {
   vi.unstubAllEnvs();
   vi.stubEnv("CRON_SECRET", "s3cret");
@@ -73,7 +78,11 @@ describe("GET /api/demo/cleanup", () => {
 
     const response = await GET(cleanupRequest("s3cret"));
 
-    expect(await response.json()).toEqual({ success: true, deleted: 1 });
+    expect(await response.json()).toEqual({
+      success: true,
+      deleted: 1,
+      failed: 0,
+    });
     expect(db.user.deleteMany).toHaveBeenCalledWith({
       where: { id: { in: ["user_d1"] } },
     });
@@ -98,20 +107,55 @@ describe("GET /api/demo/cleanup", () => {
     );
   });
 
-  it("keeps going through pages and stops when nothing could be deleted", async () => {
+  it("keeps paging past users that are not demo users", async () => {
     clerk.users.getUserList
-      .mockResolvedValueOnce({ data: [user("a", true), user("b", true)] })
-      .mockResolvedValueOnce({ data: [user("c", true)] })
-      .mockResolvedValue({ data: [user("d", true)] });
-    clerk.users.deleteUser.mockImplementation(async (id: string) => {
-      if (id === "d") throw new Error("clerk down");
-      return {};
-    });
+      .mockResolvedValueOnce({ data: fullPage("real", false) })
+      .mockResolvedValueOnce({ data: [user("user_d1", true)] });
 
     const response = await GET(cleanupRequest("s3cret"));
 
-    expect(await response.json()).toEqual({ success: true, deleted: 3 });
-    expect(clerk.users.getUserList).toHaveBeenCalledTimes(3);
+    expect(await response.json()).toEqual({
+      success: true,
+      deleted: 1,
+      failed: 0,
+    });
+    expect(clerk.users.getUserList.mock.calls[1][0].offset).toBe(100);
+    expect(clerk.users.deleteUser).toHaveBeenCalledWith("user_d1");
+  });
+
+  it("does not skip users that stay in the list when a deletion fails", async () => {
+    const page = [
+      user("a", true),
+      user("b", true),
+      ...fullPage("real", false).slice(2),
+    ];
+    clerk.users.getUserList
+      .mockResolvedValueOnce({ data: page })
+      .mockResolvedValueOnce({ data: [] });
+    clerk.users.deleteUser.mockImplementation(async (id: string) => {
+      if (id === "a") throw new Error("clerk down");
+      return {};
+    });
+
+    await GET(cleanupRequest("s3cret"));
+
+    expect(clerk.users.getUserList.mock.calls[1][0].offset).toBe(99);
+  });
+
+  it("logs failed deletions and reports them with a 500", async () => {
+    clerk.users.getUserList.mockResolvedValue({ data: [user("d", true)] });
+    clerk.users.deleteUser.mockRejectedValue(new Error("clerk down"));
+
+    const response = await GET(cleanupRequest("s3cret"));
+
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({
+      success: false,
+      deleted: 0,
+      failed: 1,
+    });
+    expect(console.error).toHaveBeenCalledTimes(1);
+    expect(clerk.users.getUserList).toHaveBeenCalledTimes(1);
   });
 
   it("returns a 500 when Clerk cannot be listed", async () => {

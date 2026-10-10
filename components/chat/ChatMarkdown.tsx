@@ -14,13 +14,17 @@ const MARKDOWN_CLASS = [
   "[&_table]:w-full [&_table]:text-sm [&_th]:border [&_th]:border-surface-border [&_th]:px-2 [&_th]:py-1 [&_th]:text-left [&_td]:border [&_td]:border-surface-border [&_td]:px-2 [&_td]:py-1",
 ].join(" ");
 
-/** Model-generated links open in a new tab without access to this page. */
+/**
+ * Model-generated links open in a new tab without access to this page. Images are never
+ * loaded: the browser would fetch the URL on its own, which can carry chat text to another site.
+ */
 const MARKDOWN_COMPONENTS: Components = {
   a: ({ href, children }) => (
     <a href={href} target="_blank" rel="noopener noreferrer">
       {children}
     </a>
   ),
+  img: ({ alt }) => <span>{alt ? `[image: ${alt}]` : "[image]"}</span>,
 };
 
 interface ChatMarkdownProps {
