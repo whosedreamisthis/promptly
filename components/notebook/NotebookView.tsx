@@ -11,6 +11,7 @@ import { useChats } from "@/components/chat/ChatsProvider";
 import { usePendingDelete } from "@/components/chat/usePendingDelete";
 import InlineRenameInput from "@/components/chat/InlineRenameInput";
 import NotebookNameForm from "@/components/notebook/NotebookNameForm";
+import { downloadChat } from "@/lib/download-chat";
 import { isUnnamedNotebook } from "@/lib/notebooks";
 import type { ChatSubmission } from "@/types/chats";
 
@@ -121,6 +122,10 @@ export default function NotebookView({ notebookId }: NotebookViewProps) {
                         {
                           label: "Remove from notebook",
                           onSelect: () => moveChatToNotebook(chat.id, null),
+                        },
+                        {
+                          label: "Export",
+                          onSelect: () => void downloadChat(chat.id),
                         },
                         {
                           label: "Delete",

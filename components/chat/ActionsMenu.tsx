@@ -30,6 +30,8 @@ interface ActionsMenuProps {
   keepFocus?: boolean;
   triggerSize?: "icon" | "icon-sm";
   triggerClassName?: string;
+  /** Replaces the default vertical dots on the trigger. */
+  triggerIcon?: React.ReactNode;
 }
 
 function MenuItems({ actions }: { actions: MenuAction[] }) {
@@ -70,6 +72,7 @@ export default function ActionsMenu({
   keepFocus = false,
   triggerSize = "icon",
   triggerClassName,
+  triggerIcon = <MoreVertical />,
 }: ActionsMenuProps) {
   // Read through a ref: the menu closes in the same update that starts the rename.
   const keepFocusRef = useLatest(keepFocus);
@@ -82,7 +85,7 @@ export default function ActionsMenu({
           aria-label={label}
           className={triggerClassName}
         >
-          <MoreVertical />
+          {triggerIcon}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent

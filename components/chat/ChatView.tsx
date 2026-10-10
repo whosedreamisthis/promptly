@@ -4,10 +4,15 @@ import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
+import { MoreHorizontal } from "lucide-react";
+import ActionsMenu from "@/components/chat/ActionsMenu";
 import ChatInput from "@/components/chat/ChatInput";
 import ChatThread from "@/components/chat/ChatThread";
 import { useChats, useMessages } from "@/components/chat/ChatsProvider";
+import ConfirmDeleteDialog from "@/components/chat/ConfirmDeleteDialog";
+import RenameChatDialog from "@/components/chat/RenameChatDialog";
 import Logo from "@/components/layout/Logo";
+import { useSidebarMenus } from "@/components/sidebar/useSidebarMenus";
 import { Button } from "@/components/ui/button";
 import {
   Breadcrumb,
@@ -42,9 +47,25 @@ export default function ChatView({
   }, []);
 
   const router = useRouter();
-  const { chats, notebooks, isGuest, guestChatId, seedMessages, sendMessage } =
-    useChats();
+  const {
+    chats,
+    notebooks,
+    isGuest,
+    guestChatId,
+    seedMessages,
+    sendMessage,
+    renameChat,
+    deleteChat,
+  } = useChats();
   const { messagesByChat, streamingChatIds } = useMessages();
+  const { renamingId, setRenamingId, chatActions, deleteDialogProps } =
+    useSidebarMenus({
+      onDeleteChat: (id) => {
+        deleteChat(id);
+        router.push("/");
+      },
+      onDeleteNotebook: () => {},
+    });
 
   useEffect(() => {
     // Seeding is a no-op once the chat has messages in memory.
@@ -76,27 +97,38 @@ export default function ChatView({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      {chat && notebook && (
-        <Breadcrumb className="shrink-0 px-14 py-2">
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink asChild>
-                <Link
-                  href={`/notebooks/${notebook.id}`}
-                  className="block max-w-48 truncate"
-                >
-                  {notebook.title}
-                </Link>
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbPage className="block max-w-64 truncate">
-                {chat.title}
-              </BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
+      {chat && (
+        <div className="flex shrink-0 items-center justify-between gap-2 px-14 py-2">
+          {notebook ? (
+            <Breadcrumb className="min-w-0">
+              <BreadcrumbList>
+                <BreadcrumbItem>
+                  <BreadcrumbLink asChild>
+                    <Link
+                      href={`/notebooks/${notebook.id}`}
+                      className="block max-w-48 truncate"
+                    >
+                      {notebook.title}
+                    </Link>
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem>
+                  <BreadcrumbPage className="block max-w-64 truncate">
+                    {chat.title}
+                  </BreadcrumbPage>
+                </BreadcrumbItem>
+              </BreadcrumbList>
+            </Breadcrumb>
+          ) : (
+            <span />
+          )}
+          <ActionsMenu
+            label="Chat options"
+            actions={chatActions(chat)}
+            triggerIcon={<MoreHorizontal />}
+          />
+        </div>
       )}
       <div className="min-h-0 flex-1 overflow-y-auto">
         {messages.length === 0 ? (
@@ -123,6 +155,18 @@ export default function ChatView({
         )}
         <ChatInput disabled={streaming} onSubmit={handleSubmit} />
       </div>
+      {chat && (
+        <RenameChatDialog
+          open={renamingId === chat.id}
+          title={chat.title}
+          onOpenChange={(open) => !open && setRenamingId(null)}
+          onRename={(title) => {
+            renameChat(chat.id, title);
+            setRenamingId(null);
+          }}
+        />
+      )}
+      <ConfirmDeleteDialog {...deleteDialogProps} />
     </div>
   );
 }
