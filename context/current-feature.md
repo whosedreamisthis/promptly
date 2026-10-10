@@ -1,26 +1,20 @@
 # Current Feature
 
-# Current Feature: Export and Prompts Hardening
-
-Fixes from the code scan of the export route and the prompts library.
+<!-- Feature name and short description -->
 
 ## Status
 
-In Progress
+<!-- Not Started | In Progress | Completed -->
+
+Completed
 
 ## Goals
 
-- Make the 100-prompt limit atomic, so simultaneous creates cannot go over it
-- Rate limit the export route and the prompt actions per user, returning 429 or an error message
-- Cap the number of messages in an export
-- Add `X-Content-Type-Options: nosniff` to the export response and collapse whitespace in the exported title
-- Expire a prompt draft after a few seconds, so a failed navigation cannot fill a later chat box
-- Encode the chat id in the download URL and delay revoking the blob URL
+<!-- Goals and requirements -->
 
 ## Notes
 
-- Findings 1, 2, 3, 4, 5, 7 and 9 of the scan; the rest were left on purpose (body size check, extra user lookup, `as Prompt` casts, large functions)
-- No migration, new dependency or environment variable
+<!-- Any extra notes -->
 
 ## Completed Features
 
@@ -55,3 +49,4 @@ In Progress
 - **Simplify More Chat Code:** Removes the duplicate `GuestHistory` type, shares the notebook ownership check in the chat actions, and names the repeated send condition in the chat input, with no behavior change; key files `actions/chats.ts`, `components/chat/useChatMessages.ts`, `components/chat/ChatInput.tsx`.
 - **Prompts Library:** Adds a `/prompts` page with 12 starter prompts and the user's own saved prompts, where Use fills the chat input of a new chat; key files `app/prompts/page.tsx`, `components/prompts/`, `actions/prompts.ts`.
 - **Export Chat:** Adds Markdown download of a saved chat from the chat menus in the sidebar, notebook pages and a new three-dot menu on the chat page; key files `app/api/chats/[chatId]/export/route.ts`, `lib/chat-export.ts`, `components/chat/ChatView.tsx`.
+- **Export and Prompts Hardening:** Makes the prompt limit atomic, rate limits export and prompt changes, caps exports, and expires stale prompt drafts, from the code scan; key files `actions/prompts.ts`, `lib/action-limits.ts`, `lib/prompt-draft.ts`.
