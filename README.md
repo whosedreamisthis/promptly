@@ -7,6 +7,7 @@ A chatbot web app with streaming Gemini replies, saved chats organised into note
 - **Streaming chat:** Gemini replies stream from `/api/chat`, rendered as markdown, with auto-generated chat titles and a mock mode that skips model calls.
 - **Chats and notebooks:** Chats and messages are saved per user in Postgres. Notebooks group related chats and have their own pages.
 - **Prompts library:** 12 starter prompts plus your own saved prompts at `/prompts`, with search and categories. Use fills the chat input of a new chat.
+- **Export:** Download any saved chat as a Markdown file from its three-dot menu in the sidebar, on notebook pages or on the chat page.
 - **Sidebar:** Search, new chat, pinned and recent chats, and rename, pin and delete menus with delete confirmation.
 - **Input extras:** File attachments and voice dictation.
 - **Guest chat:** Signed-out visitors can chat in memory without saving.

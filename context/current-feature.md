@@ -1,20 +1,28 @@
 # Current Feature
 
-<!-- Feature name and short description -->
+# Current Feature: Export Chat
+
+Download a saved chat as a Markdown file from the chat's actions menu, in the sidebar and on notebook pages.
 
 ## Status
 
-<!-- Not Started | In Progress | Completed -->
-
-Completed
+In Progress
 
 ## Goals
 
-<!-- Goals and requirements -->
+- Add `lib/chat-export.ts` that builds the Markdown (title, export date, each message labelled You or Promptly) and a safe file name, with tests
+- Add `GET /api/chats/[chatId]/export` that returns the chat as a Markdown download for its owner only, with a test
+- Add an Export item to the chat actions menu in the sidebar and on notebook pages, which downloads the file
+- Add a three-dot menu at the top right of the chat page with Export and the other chat options (copy link, pin, rename, add to notebook, delete)
+- Add Export to the README features list
 
 ## Notes
 
-<!-- Any extra notes -->
+- Markdown only for v1; PDF, plain text and share links are out of scope
+- Signed-in users only: signed-out chats are not saved, so there is nothing to export
+- The route reads the chat from the database, because chats in the sidebar may not have their messages loaded in the browser
+- An API route is used because the response needs download headers (see coding standards); no new dependencies, environment variables or migrations
+- Use shadcn components and existing menu items; no new colors
 
 ## Completed Features
 

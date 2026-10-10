@@ -4,6 +4,7 @@ import { useState } from "react";
 import {
   BookOpen,
   BookPlus,
+  Download,
   Link2,
   Pencil,
   Pin,
@@ -14,6 +15,7 @@ import { toast } from "sonner";
 import type { MenuAction } from "@/components/chat/ActionsMenu";
 import { useChats } from "@/components/chat/ChatsProvider";
 import { usePendingDelete } from "@/components/chat/usePendingDelete";
+import { downloadChat } from "@/lib/download-chat";
 import type { Chat, Notebook } from "@/types/chats";
 
 interface SidebarMenusOptions {
@@ -74,6 +76,11 @@ export function useSidebarMenus({
         icon: <BookOpen className="h-4 w-4" />,
         onSelect: () => moveChatToNotebook(chat.id, notebook.id),
       })),
+    },
+    {
+      label: "Export",
+      icon: <Download className="h-4 w-4" />,
+      onSelect: () => void downloadChat(chat.id),
     },
     {
       label: "Delete",
