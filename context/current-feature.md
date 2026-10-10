@@ -1,28 +1,20 @@
 # Current Feature
 
-# Current Feature: Export Chat
-
-Download a saved chat as a Markdown file from the chat's actions menu, in the sidebar and on notebook pages.
+<!-- Feature name and short description -->
 
 ## Status
 
-In Progress
+<!-- Not Started | In Progress | Completed -->
+
+Completed
 
 ## Goals
 
-- Add `lib/chat-export.ts` that builds the Markdown (title, export date, each message labelled You or Promptly) and a safe file name, with tests
-- Add `GET /api/chats/[chatId]/export` that returns the chat as a Markdown download for its owner only, with a test
-- Add an Export item to the chat actions menu in the sidebar and on notebook pages, which downloads the file
-- Add a three-dot menu at the top right of the chat page with Export and the other chat options (copy link, pin, rename, add to notebook, delete)
-- Add Export to the README features list
+<!-- Goals and requirements -->
 
 ## Notes
 
-- Markdown only for v1; PDF, plain text and share links are out of scope
-- Signed-in users only: signed-out chats are not saved, so there is nothing to export
-- The route reads the chat from the database, because chats in the sidebar may not have their messages loaded in the browser
-- An API route is used because the response needs download headers (see coding standards); no new dependencies, environment variables or migrations
-- Use shadcn components and existing menu items; no new colors
+<!-- Any extra notes -->
 
 ## Completed Features
 
@@ -56,3 +48,4 @@ In Progress
 - **Simplify Chat Code:** Splits the guest branch and shared helpers out of `ChatsProvider` and moves reply saving and body reading out of the chat route, with no behavior change; key files `components/chat/ChatsProvider.tsx`, `app/api/chat/route.ts`, `lib/save-chat-turn.ts`.
 - **Simplify More Chat Code:** Removes the duplicate `GuestHistory` type, shares the notebook ownership check in the chat actions, and names the repeated send condition in the chat input, with no behavior change; key files `actions/chats.ts`, `components/chat/useChatMessages.ts`, `components/chat/ChatInput.tsx`.
 - **Prompts Library:** Adds a `/prompts` page with 12 starter prompts and the user's own saved prompts, where Use fills the chat input of a new chat; key files `app/prompts/page.tsx`, `components/prompts/`, `actions/prompts.ts`.
+- **Export Chat:** Adds Markdown download of a saved chat from the chat menus in the sidebar, notebook pages and a new three-dot menu on the chat page; key files `app/api/chats/[chatId]/export/route.ts`, `lib/chat-export.ts`, `components/chat/ChatView.tsx`.
