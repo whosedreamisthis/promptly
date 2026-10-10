@@ -44,6 +44,34 @@ describe("isRateLimited", () => {
   });
 });
 
+describe("checkLimit when Upstash is not configured", () => {
+  const spec = { limit: 5, window: "1 m" } as const;
+
+  beforeEach(() => {
+    resetRateLimits();
+    vi.stubEnv("UPSTASH_REDIS_REST_URL", "");
+    vi.stubEnv("UPSTASH_REDIS_REST_TOKEN", "");
+  });
+
+  it("uses the in-memory limiter, even with failClosed", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+
+    expect(await checkLimit("k", spec, { failClosed: true })).toBe(false);
+  });
+
+  it("counts as limited in production with requireRedis", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+
+    expect(await checkLimit("k", spec, { requireRedis: true })).toBe(true);
+  });
+
+  it("still uses the in-memory limiter outside production with requireRedis", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+
+    expect(await checkLimit("k", spec, { requireRedis: true })).toBe(false);
+  });
+});
+
 describe("checkLimit when Upstash is unreachable", () => {
   const spec = { limit: 5, window: "1 m" } as const;
 

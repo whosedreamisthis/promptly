@@ -1,20 +1,26 @@
 # Current Feature
 
-<!-- Feature name and short description -->
+# Current Feature: Limiter and Markdown Hardening
+
+Fixes from the second code scan, covering the rate limiter, the chat Markdown renderer and demo cleanup.
 
 ## Status
 
-<!-- Not Started | In Progress | Completed -->
-
-Completed
+In Progress
 
 ## Goals
 
-<!-- Goals and requirements -->
+- Never load images from model replies: render a Markdown image as plain text
+- Make the demo limits strict when Redis is not configured in production, not only when it errors
+- Make the model spend limits (global budget, daily limit, title generation) fail closed when Redis errors
+- Make demo cleanup page past users that are not demo users, so it cannot stall
+- Log failed demo user deletions and report them with a 500 and a failed count
 
 ## Notes
 
-<!-- Any extra notes -->
+- Findings 1, 2, 3, 6 and 7 of the second scan; the rest were left on purpose (shared "unknown" IP bucket, in-memory sweep, capacity race, body buffering, notebook id signal)
+- Chat limits fail closed on a Redis error only, so a deployment without Redis still gets live replies
+- No migration, new dependency or environment variable
 
 ## Completed Features
 

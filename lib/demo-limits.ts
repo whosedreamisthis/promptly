@@ -11,6 +11,9 @@ export const MAX_LIVE_DEMO_USERS = 150;
 
 const HOUR_MS = 3_600_000;
 
+/** Each demo creates a Clerk user, so these limits must hold: strict when Redis is down or missing in production. */
+const DEMO_LIMIT_OPTIONS = { failClosed: true, requireRedis: true } as const;
+
 /**
  * The caller's address from a header the hosting platform sets (clients can't forge it),
  * or "unknown" when there is none. `x-forwarded-for` is deliberately not used: its first
@@ -31,7 +34,7 @@ export function isDemoIpLimited(ip: string): Promise<boolean> {
       limit: positiveIntFromEnv("DEMO_LIMIT_PER_IP", DEFAULT_LIMIT_PER_IP),
       window: "1 d",
     },
-    { failClosed: true },
+    DEMO_LIMIT_OPTIONS,
   );
 }
 
@@ -43,7 +46,7 @@ export function isDemoGloballyLimited(): Promise<boolean> {
       limit: positiveIntFromEnv("DEMO_LIMIT_GLOBAL", DEFAULT_LIMIT_GLOBAL),
       window: "1 d",
     },
-    { failClosed: true },
+    DEMO_LIMIT_OPTIONS,
   );
 }
 

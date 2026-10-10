@@ -6,7 +6,11 @@ import { CHAT_SELECT } from "@/lib/chats-data";
 import { buildTitlePrompt, cleanTitle, getModel, isAiEnabled } from "@/lib/ai";
 import { db } from "@/lib/db";
 import { hasErrorCode, UNIQUE_VIOLATION_CODE } from "@/lib/db-errors";
-import { isModelBudgetSpent, titleLimit } from "@/lib/chat-limits";
+import {
+  isModelBudgetSpent,
+  MODEL_SPEND_OPTIONS,
+  titleLimit,
+} from "@/lib/chat-limits";
 import { checkLimit } from "@/lib/rate-limit";
 import { runAction } from "@/lib/run-action";
 import {
@@ -143,7 +147,11 @@ export async function generateChatTitle(
   return runAction(chatIdSchema, input, async (userId, data) => {
     if (
       !isAiEnabled() ||
-      (await checkLimit(`title:${userId}`, titleLimit())) ||
+      (await checkLimit(
+        `title:${userId}`,
+        titleLimit(),
+        MODEL_SPEND_OPTIONS,
+      )) ||
       (await isModelBudgetSpent())
     ) {
       return ok({ title: null });

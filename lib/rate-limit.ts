@@ -70,23 +70,32 @@ function getUpstashLimiter({ limit, window }: LimitSpec): Ratelimit | null {
 /**
  * Records a call and returns true when `key` is over `spec`. Uses Upstash Redis so the
  * count is shared by every server instance; falls back to the in-memory limiter when
- * Upstash is not configured or unreachable. With `failClosed`, an unreachable Upstash
- * counts as limited instead, because the per-instance fallback would not hold.
+ * Upstash is not configured or unreachable. The per-instance fallback does not hold across
+ * instances or cold starts, so two options make a limit strict:
+ * - `failClosed`: an unreachable Upstash counts as limited.
+ * - `requireRedis`: in production, Upstash not being configured counts as limited.
  */
 export async function checkLimit(
   key: string,
   spec: LimitSpec,
-  { failClosed = false }: { failClosed?: boolean } = {},
+  {
+    failClosed = false,
+    requireRedis = false,
+  }: { failClosed?: boolean; requireRedis?: boolean } = {},
 ): Promise<boolean> {
+  const fallback = () =>
+    isRateLimited(`${spec.window}:${key}`, spec.limit, WINDOW_MS[spec.window]);
   const limiter = getUpstashLimiter(spec);
-  if (limiter) {
-    try {
-      const { success } = await limiter.limit(key);
-      return !success;
-    } catch (error) {
-      console.error(error);
-      if (failClosed) return true;
-    }
+  if (!limiter) {
+    return requireRedis && process.env.NODE_ENV === "production"
+      ? true
+      : fallback();
   }
-  return isRateLimited(`${spec.window}:${key}`, spec.limit, WINDOW_MS[spec.window]);
+  try {
+    const { success } = await limiter.limit(key);
+    return !success;
+  } catch (error) {
+    console.error(error);
+    return failClosed ? true : fallback();
+  }
 }
