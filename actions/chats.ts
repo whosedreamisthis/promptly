@@ -3,12 +3,7 @@
 import { generateText } from "ai";
 import { fail, ok } from "@/lib/action-result";
 import { CHAT_SELECT } from "@/lib/chats-data";
-import {
-  buildTitlePrompt,
-  cleanTitle,
-  getModel,
-  isAiEnabled,
-} from "@/lib/ai";
+import { buildTitlePrompt, cleanTitle, getModel, isAiEnabled } from "@/lib/ai";
 import { db } from "@/lib/db";
 import { hasErrorCode, UNIQUE_VIOLATION_CODE } from "@/lib/db-errors";
 import { isModelBudgetSpent, titleLimit } from "@/lib/chat-limits";
@@ -30,18 +25,28 @@ import type { ActionResult } from "@/types/actions";
 import type { Chat } from "@/types/chats";
 
 const CHAT_NOT_FOUND = "Chat not found";
+const NOTEBOOK_NOT_FOUND = "Notebook not found";
 const FIRST_EXCHANGE_MESSAGE_COUNT = 2;
+
+/** True when no notebook is given, or the notebook belongs to the user. */
+async function ownsNotebook(
+  userId: string,
+  notebookId: string | null | undefined,
+): Promise<boolean> {
+  if (!notebookId) return true;
+  const notebook = await db.notebook.findFirst({
+    where: { id: notebookId, userId },
+    select: { id: true },
+  });
+  return notebook !== null;
+}
 
 export async function createChat(
   input: CreateChatInput,
 ): Promise<ActionResult<Chat>> {
   return runAction(createChatSchema, input, async (userId, data) => {
-    if (data.notebookId) {
-      const notebook = await db.notebook.findFirst({
-        where: { id: data.notebookId, userId },
-        select: { id: true },
-      });
-      if (!notebook) return fail("Notebook not found");
+    if (!(await ownsNotebook(userId, data.notebookId))) {
+      return fail(NOTEBOOK_NOT_FOUND);
     }
     try {
       const chat = await db.chat.create({
@@ -60,13 +65,9 @@ export async function createChat(
         where: { id: data.id },
         select: { ...CHAT_SELECT, userId: true },
       });
-      if (!existing || existing.userId !== userId) return fail(CHAT_NOT_FOUND);
-      return ok({
-        id: existing.id,
-        title: existing.title,
-        pinned: existing.pinned,
-        notebookId: existing.notebookId,
-      });
+      if (!existing) return fail(CHAT_NOT_FOUND);
+      const { userId: ownerId, ...chat } = existing;
+      return ownerId === userId ? ok(chat) : fail(CHAT_NOT_FOUND);
     }
   });
 }
@@ -114,12 +115,8 @@ export async function moveChatToNotebook(
   input: MoveChatInput,
 ): Promise<ActionResult> {
   return runAction(moveChatSchema, input, async (userId, data) => {
-    if (data.notebookId) {
-      const notebook = await db.notebook.findFirst({
-        where: { id: data.notebookId, userId },
-        select: { id: true },
-      });
-      if (!notebook) return fail("Notebook not found");
+    if (!(await ownsNotebook(userId, data.notebookId))) {
+      return fail(NOTEBOOK_NOT_FOUND);
     }
     const { count } = await db.chat.updateMany({
       where: { id: data.chatId, userId },
