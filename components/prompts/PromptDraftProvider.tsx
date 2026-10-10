@@ -1,6 +1,7 @@
 "use client";
 
-import { createContext, useContext, useMemo, useRef } from "react";
+import { createContext, useContext, useMemo } from "react";
+import { createDraftStore } from "@/lib/prompt-draft";
 
 interface PromptDraftApi {
   /** Stores a prompt for the next chat input that opens. */
@@ -19,19 +20,14 @@ export function PromptDraftProvider({
 }: {
   children: React.ReactNode;
 }) {
-  const draftRef = useRef<string | null>(null);
-  const api = useMemo<PromptDraftApi>(
-    () => ({
-      setDraft: (text) => {
-        draftRef.current = text;
-      },
-      getDraft: () => draftRef.current,
-      clearDraft: () => {
-        draftRef.current = null;
-      },
-    }),
-    [],
-  );
+  const api = useMemo<PromptDraftApi>(() => {
+    const store = createDraftStore();
+    return {
+      setDraft: store.set,
+      getDraft: store.get,
+      clearDraft: store.clear,
+    };
+  }, []);
   return (
     <PromptDraftContext.Provider value={api}>
       {children}

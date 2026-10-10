@@ -1,6 +1,9 @@
 const FILE_NAME_MAX_LENGTH = 60;
 const FALLBACK_FILE_NAME = "chat";
 
+/** Most messages written to one export, so a huge chat cannot make an unbounded response. */
+export const MAX_EXPORT_MESSAGES = 5000;
+
 export interface ExportMessage {
   role: "USER" | "ASSISTANT";
   content: string;
@@ -22,7 +25,7 @@ export function buildChatMarkdown(
     ({ role, content }) => `**${ROLE_LABEL[role]}**\n\n${content}`,
   );
   return [
-    `# ${title}`,
+    `# ${title.replace(/\s+/g, " ").trim()}`,
     `_Exported from Promptly on ${date}_`,
     ...turns.flatMap((turn) => ["---", turn]),
   ]
