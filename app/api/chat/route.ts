@@ -19,20 +19,19 @@ import {
   type ReplySource,
 } from "@/lib/chat-limits";
 import { getClientIp } from "@/lib/demo-limits";
-import { hasErrorCode, UNIQUE_VIOLATION_CODE } from "@/lib/db-errors";
+import { saveChatTurn } from "@/lib/save-chat-turn";
 import { ensureUser } from "@/lib/session";
 import {
   chatRequestSchema,
   capGuestHistory,
   MAX_GUEST_MESSAGE_LENGTH,
-  MAX_MESSAGE_LENGTH,
 } from "@/lib/validations/messages";
 
 export const maxDuration = 60;
 
 /** One retry covers a transient failure without making users wait long before the fallback reply. */
 const MODEL_MAX_RETRIES = 1;
-const GENERIC_ERROR ="Something went wrong. Please try again.";
+const GENERIC_ERROR = "Something went wrong. Please try again.";
 /** Generous cap for a message plus the history a signed-out user sends, with ids and JSON overhead. */
 const MAX_BODY_BYTES = 150_000;
 
@@ -42,6 +41,15 @@ function parseJson(raw: string): unknown {
   } catch {
     return null;
   }
+}
+
+/** Returns the request body, or null if it is over the size limit. */
+async function readBody(request: Request): Promise<string | null> {
+  const contentLength = Number(request.headers.get("content-length") ?? 0);
+  if (contentLength > MAX_BODY_BYTES) return null;
+  // content-length is absent on chunked requests, so the body itself is measured too.
+  const raw = await request.text().catch(() => "");
+  return raw.length > MAX_BODY_BYTES ? null : raw;
 }
 
 function errorResponse(error: string, status: number) {
@@ -102,15 +110,8 @@ async function guestReply(
 }
 
 export async function POST(request: Request) {
-  const contentLength = Number(request.headers.get("content-length") ?? 0);
-  if (contentLength > MAX_BODY_BYTES) {
-    return errorResponse("Message too large", 413);
-  }
-  // content-length is absent on chunked requests, so the body itself is measured too.
-  const raw = await request.text().catch(() => "");
-  if (raw.length > MAX_BODY_BYTES) {
-    return errorResponse("Message too large", 413);
-  }
+  const raw = await readBody(request);
+  if (raw === null) return errorResponse("Message too large", 413);
   const parsed = chatRequestSchema.safeParse(parseJson(raw));
   if (!parsed.success) return errorResponse("Invalid input", 400);
   const { chatId, messageId, text, history: guestHistory } = parsed.data;
@@ -145,44 +146,15 @@ export async function POST(request: Request) {
     ];
 
     const assistantId = crypto.randomUUID();
-    // The user message is saved together with its reply, so a failed or aborted
-    // reply never leaves a dangling user message behind.
-    const saveReply = async (reply: string) => {
-      const content = reply.trim().slice(0, MAX_MESSAGE_LENGTH);
-      if (!content) return;
-      const replyCreatedAt = new Date(
-        Math.max(Date.now(), userCreatedAt.getTime() + 1),
-      );
-      try {
-        await db.$transaction([
-          db.message.create({
-            data: {
-              id: messageId,
-              chatId,
-              role: "USER",
-              content: text,
-              createdAt: userCreatedAt,
-            },
-          }),
-          db.message.create({
-            data: {
-              id: assistantId,
-              chatId,
-              role: "ASSISTANT",
-              content,
-              createdAt: replyCreatedAt,
-            },
-          }),
-          db.chat.update({
-            where: { id: chatId },
-            data: { updatedAt: replyCreatedAt },
-          }),
-        ]);
-      } catch (error) {
-        // A concurrent request with the same messageId already saved this turn.
-        if (!hasErrorCode(error, UNIQUE_VIOLATION_CODE)) console.error(error);
-      }
-    };
+    const saveReply = (reply: string) =>
+      saveChatTurn({
+        chatId,
+        userMessageId: messageId,
+        userText: text,
+        userCreatedAt,
+        assistantMessageId: assistantId,
+        reply,
+      });
 
     const source = await chooseReplySource("user", userId);
     if (source !== "model") {

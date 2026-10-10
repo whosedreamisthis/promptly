@@ -19,6 +19,7 @@ import {
 } from "@/actions/chats";
 import { useChatMessages } from "@/components/chat/useChatMessages";
 import { useNotebooks } from "@/components/chat/useNotebooks";
+import type { HistoryMessage } from "@/lib/ai";
 import { persist } from "@/lib/persist";
 import {
   MAX_GUEST_HISTORY,
@@ -33,6 +34,7 @@ import {
   type ChatSubmission,
   type Notebook,
 } from "@/types/chats";
+import type { ActionResult } from "@/types/actions";
 
 const TITLE_MAX_LENGTH = 40;
 
@@ -181,41 +183,56 @@ export default function ChatsProvider({
       return saved ? id : null;
     };
 
+    const sendUserMessage = (
+      chatId: string,
+      { text, files }: ChatSubmission,
+      isFirstTurn: boolean,
+      history?: HistoryMessage[],
+    ) => {
+      const messageId = crypto.randomUUID();
+      messageActions.addMessage(chatId, {
+        id: messageId,
+        role: "user",
+        text,
+        fileNames: files.map((file) => file.name),
+      });
+      void messageActions.streamReply(
+        chatId,
+        messageId,
+        text,
+        isFirstTurn,
+        history,
+      );
+    };
+
+    const sendGuestMessage = (submission: ChatSubmission) => {
+      if (submission.text.length > MAX_GUEST_MESSAGE_LENGTH) {
+        toast.error(
+          `Messages are limited to ${MAX_GUEST_MESSAGE_LENGTH} characters unless you sign in`,
+        );
+        return null;
+      }
+      const history = (messagesRef.current[guestChatId] ?? [])
+        .filter((message) => message.text)
+        .slice(-MAX_GUEST_HISTORY)
+        .map((message) => ({
+          role:
+            message.role === "user"
+              ? ("USER" as const)
+              : ("ASSISTANT" as const),
+          content: message.text,
+        }));
+      sendUserMessage(guestChatId, submission, false, history);
+      return guestChatId;
+    };
+
     const sendMessage = async (id: string, submission: ChatSubmission) => {
       if (!submission.text) {
         toast.error("Type a message to send with your files");
         return null;
       }
-      if (isGuest) {
-        if (submission.text.length > MAX_GUEST_MESSAGE_LENGTH) {
-          toast.error(
-            `Messages are limited to ${MAX_GUEST_MESSAGE_LENGTH} characters unless you sign in`,
-          );
-          return null;
-        }
-        const history =(messagesRef.current[guestChatId] ?? [])
-          .filter((message) => message.text)
-          .slice(-MAX_GUEST_HISTORY)
-          .map((message) => ({
-            role: message.role === "user" ? ("USER" as const) : ("ASSISTANT" as const),
-            content: message.text,
-          }));
-        const messageId = crypto.randomUUID();
-        messageActions.addMessage(guestChatId, {
-          id: messageId,
-          role: "user",
-          text: submission.text,
-          fileNames: submission.files.map((file) => file.name),
-        });
-        void messageActions.streamReply(
-          guestChatId,
-          messageId,
-          submission.text,
-          false,
-          history,
-        );
-        return guestChatId;
-      }
+      if (isGuest) return sendGuestMessage(submission);
+
       const existing = chatsRef.current.find((chat) => chat.id === id);
       const title = titleFor(submission);
       const isFirstTurn = hasNoMessages(id);
@@ -229,31 +246,36 @@ export default function ChatsProvider({
         updateChat(id, { title });
         autoTitleChat({ chatId: id, title }).catch(console.error);
       }
-      const messageId = crypto.randomUUID();
-      messageActions.addMessage(id, {
-        id: messageId,
-        role: "user",
-        text: submission.text,
-        fileNames: submission.files.map((file) => file.name),
-      });
-      void messageActions.streamReply(id, messageId, submission.text, isFirstTurn);
+      sendUserMessage(id, submission, isFirstTurn);
       return id;
     };
 
-    const renameChat = (id: string, title: string) => {
-      const previous = chatsRef.current.find((chat) => chat.id === id)?.title;
-      updateChat(id, { title });
-      void persist(renameChatAction({ chatId: id, title }), () => {
-        if (previous !== undefined) updateChat(id, { title: previous });
+    /** Updates one chat field right away, restoring it if saving fails. */
+    const setChatField = <K extends keyof Chat>(
+      id: string,
+      key: K,
+      value: Chat[K],
+      action: Promise<ActionResult<unknown>>,
+    ) => {
+      const previous = chatsRef.current.find((chat) => chat.id === id)?.[key];
+      updateChat(id, { [key]: value } as Partial<Chat>);
+      void persist(action, () => {
+        if (previous !== undefined) {
+          updateChat(id, { [key]: previous } as Partial<Chat>);
+        }
       });
     };
 
+    const renameChat = (id: string, title: string) =>
+      setChatField(id, "title", title, renameChatAction({ chatId: id, title }));
+
     const togglePinChat = (id: string) => {
-      const wasPinned =
-        chatsRef.current.find((chat) => chat.id === id)?.pinned ?? false;
-      updateChat(id, { pinned: !wasPinned });
-      void persist(setChatPinnedAction({ chatId: id, pinned: !wasPinned }), () =>
-        updateChat(id, { pinned: wasPinned }),
+      const pinned = !chatsRef.current.find((chat) => chat.id === id)?.pinned;
+      setChatField(
+        id,
+        "pinned",
+        pinned,
+        setChatPinnedAction({ chatId: id, pinned }),
       );
     };
 
@@ -265,15 +287,13 @@ export default function ChatsProvider({
       });
     };
 
-    const moveChatToNotebook = (chatId: string, notebookId: string | null) => {
-      const previous = chatsRef.current.find(
-        (chat) => chat.id === chatId,
-      )?.notebookId;
-      updateChat(chatId, { notebookId });
-      void persist(moveChatAction({ chatId, notebookId }), () =>
-        updateChat(chatId, { notebookId: previous ?? null }),
+    const moveChatToNotebook = (chatId: string, notebookId: string | null) =>
+      setChatField(
+        chatId,
+        "notebookId",
+        notebookId,
+        moveChatAction({ chatId, notebookId }),
       );
-    };
 
     return {
       seedMessages: messageActions.seedMessages,
