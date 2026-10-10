@@ -2,13 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import type { HistoryMessage } from "@/lib/ai";
 import { useLatest } from "@/lib/use-latest";
 import type { ChatMessage } from "@/types/chats";
 
 const STREAM_ERROR = "Something went wrong. Please try again.";
-
-/** Earlier turns sent along for signed-out users, whose chats are not stored. */
-export type GuestHistory = { role: "USER" | "ASSISTANT"; content: string }[];
 
 /**
  * Holds the in-memory messages of every opened chat and streams replies from /api/chat.
@@ -82,7 +80,7 @@ export function useChatMessages(onFirstReply: (chatId: string) => void) {
       messageId: string,
       text: string,
       isFirstTurn: boolean,
-      guestHistory?: GuestHistory,
+      guestHistory?: HistoryMessage[],
     ) => {
       const controller = new AbortController();
       controllersRef.current.set(chatId, controller);

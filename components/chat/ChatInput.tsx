@@ -67,7 +67,8 @@ export default function ChatInput({ disabled, onSubmit }: ChatInputProps) {
     setFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const canSend = !disabled && (text.trim() !== "" || files.length > 0);
+  const hasContent = text.trim() !== "" || files.length > 0;
+  const canSend = !disabled && hasContent;
 
   const submit = () => {
     if (!canSend) return;
@@ -191,7 +192,7 @@ export default function ChatInput({ disabled, onSubmit }: ChatInputProps) {
                 </TooltipContent>
               </Tooltip>
             )}
-            {(text.trim() !== "" || files.length > 0) && (
+            {hasContent && (
               <InputGroupButton
                 size="icon-sm"
                 variant="default"
