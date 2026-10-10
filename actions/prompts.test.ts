@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const { auth, db } = vi.hoisted(() => ({
   auth: vi.fn(),
   db: {
+    $transaction: vi.fn(),
     user: { findUnique: vi.fn(), upsert: vi.fn() },
     prompt: {
       count: vi.fn(),
@@ -19,6 +20,7 @@ vi.mock("@/lib/db", () => ({ db }));
 
 import { createPrompt, deletePrompt, updatePrompt } from "@/actions/prompts";
 import { MAX_PROMPTS_PER_USER } from "@/lib/prompts";
+import { resetRateLimits } from "@/lib/rate-limit";
 
 const input = {
   id: "p1",
@@ -35,6 +37,10 @@ const saved = {
 };
 
 beforeEach(() => {
+  resetRateLimits();
+  db.$transaction.mockImplementation((run: (tx: typeof db) => unknown) =>
+    run(db),
+  );
   auth.mockResolvedValue({ userId: "user_1" });
   db.user.findUnique.mockResolvedValue({ id: "user_1" });
   db.prompt.count.mockResolvedValue(0);
@@ -83,6 +89,49 @@ describe("createPrompt", () => {
     const result = await createPrompt(input);
 
     expect(result.success).toBe(false);
+    expect(db.prompt.create).not.toHaveBeenCalled();
+  });
+
+  it("counts and saves inside one serializable transaction", async () => {
+    db.prompt.create.mockResolvedValue(saved);
+
+    await createPrompt(input);
+
+    expect(db.$transaction).toHaveBeenCalledWith(expect.any(Function), {
+      isolationLevel: "Serializable",
+    });
+  });
+
+  it("asks the user to try again when two saves collide", async () => {
+    db.$transaction.mockRejectedValue({ code: "P2034" });
+
+    const result = await createPrompt(input);
+
+    expect(result).toMatchObject({
+      success: false,
+      error: "Too many changes at once. Please try again.",
+    });
+  });
+
+  it("slows down a user who changes prompts too fast", async () => {
+    db.prompt.create.mockResolvedValue(saved);
+    db.prompt.updateMany.mockResolvedValue({ count: 1 });
+
+    for (let i = 0; i < 30; i++) {
+      await updatePrompt({ ...input, promptId: "p1" });
+    }
+    const results = await Promise.all([
+      createPrompt(input),
+      updatePrompt({ ...input, promptId: "p1" }),
+      deletePrompt({ promptId: "p1" }),
+    ]);
+
+    for (const result of results) {
+      expect(result).toMatchObject({
+        success: false,
+        error: "Too many changes. Please slow down.",
+      });
+    }
     expect(db.prompt.create).not.toHaveBeenCalled();
   });
 

@@ -1,5 +1,10 @@
 import { auth } from "@clerk/nextjs/server";
-import { buildChatMarkdown, exportFileName } from "@/lib/chat-export";
+import { isExportLimited } from "@/lib/action-limits";
+import {
+  buildChatMarkdown,
+  exportFileName,
+  MAX_EXPORT_MESSAGES,
+} from "@/lib/chat-export";
 import { db } from "@/lib/db";
 import { idSchema } from "@/lib/validations/common";
 
@@ -18,6 +23,9 @@ export async function GET(
   try {
     const { userId } = await auth();
     if (!userId) return errorResponse("Sign in to export your chats", 401);
+    if (await isExportLimited(userId)) {
+      return errorResponse("Too many exports. Please slow down.", 429);
+    }
 
     const chat = await db.chat.findFirst({
       where: { id: parsed.data, userId },
@@ -25,6 +33,7 @@ export async function GET(
         title: true,
         messages: {
           orderBy: { createdAt: "asc" },
+          take: MAX_EXPORT_MESSAGES,
           select: { role: true, content: true },
         },
       },
@@ -38,6 +47,7 @@ export async function GET(
           "Content-Type": "text/markdown; charset=utf-8",
           "Content-Disposition": `attachment; filename="${exportFileName(chat.title)}"`,
           "Cache-Control": "no-store",
+          "X-Content-Type-Options": "nosniff",
         },
       },
     );

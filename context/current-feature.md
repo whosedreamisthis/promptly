@@ -1,20 +1,26 @@
 # Current Feature
 
-<!-- Feature name and short description -->
+# Current Feature: Export and Prompts Hardening
+
+Fixes from the code scan of the export route and the prompts library.
 
 ## Status
 
-<!-- Not Started | In Progress | Completed -->
-
-Completed
+In Progress
 
 ## Goals
 
-<!-- Goals and requirements -->
+- Make the 100-prompt limit atomic, so simultaneous creates cannot go over it
+- Rate limit the export route and the prompt actions per user, returning 429 or an error message
+- Cap the number of messages in an export
+- Add `X-Content-Type-Options: nosniff` to the export response and collapse whitespace in the exported title
+- Expire a prompt draft after a few seconds, so a failed navigation cannot fill a later chat box
+- Encode the chat id in the download URL and delay revoking the blob URL
 
 ## Notes
 
-<!-- Any extra notes -->
+- Findings 1, 2, 3, 4, 5, 7 and 9 of the scan; the rest were left on purpose (body size check, extra user lookup, `as Prompt` casts, large functions)
+- No migration, new dependency or environment variable
 
 ## Completed Features
 

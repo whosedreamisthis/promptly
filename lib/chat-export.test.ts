@@ -16,6 +16,16 @@ describe("buildChatMarkdown", () => {
     );
   });
 
+  it("keeps a title on one line", () => {
+    const markdown = buildChatMarkdown(
+      "Line one\n\n## Line two",
+      [],
+      exportedAt,
+    );
+
+    expect(markdown.startsWith("# Line one ## Line two\n\n")).toBe(true);
+  });
+
   it("puts each message under its speaker, in order", () => {
     const markdown = buildChatMarkdown(
       "Hello",
