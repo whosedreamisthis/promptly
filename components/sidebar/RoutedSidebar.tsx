@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useChats } from "@/components/chat/ChatsProvider";
+import { useNewChat } from "@/components/chat/useNewChat";
 import Sidebar from "@/components/sidebar/Sidebar";
 
 interface RoutedSidebarProps {
@@ -18,7 +19,8 @@ export default function RoutedSidebar({
 }: RoutedSidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { isGuest, createChat, deleteChat, deleteNotebook } = useChats();
+  const { deleteChat, deleteNotebook } = useChats();
+  const startNewChat = useNewChat();
   const activeChatId = pathname.startsWith("/chats/")
     ? pathname.split("/")[2]
     : null;
@@ -41,20 +43,16 @@ export default function RoutedSidebar({
     if (id === activeChatId) router.push("/");
   };
 
-  const handleNewChat = async () => {
-    const id = await createChat();
-    if (isGuest) router.push("/");
-    else if (id) router.push(`/chats/${id}`);
-  };
-
   return (
     <Sidebar
       activeChatId={activeChatId}
       activeNotebookId={activeNotebookId}
+      promptsActive={pathname === "/prompts"}
       closed={closed}
       mobileOpen={mobileOpen}
       onClose={onClose}
-      onNewChat={handleNewChat}
+      onNewChat={() => startNewChat()}
+      onOpenPrompts={() => router.push("/prompts")}
       onSelectChat={handleSelectChat}
       onSelectNotebook={handleSelectNotebook}
       onDeleteChat={handleDeleteChat}

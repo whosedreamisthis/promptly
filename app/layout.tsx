@@ -4,6 +4,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { ThemeProvider } from "next-themes";
 import ChatsLoader from "@/components/chat/ChatsLoader";
 import NavBar from "@/components/layout/NavBar";
+import { PromptDraftProvider } from "@/components/prompts/PromptDraftProvider";
 import { Toaster } from "@/components/ui/sonner";
 import AppShell from "@/components/sidebar/AppShell";
 import { Geist, Geist_Mono } from "next/font/google";
@@ -54,6 +55,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           signUpUrl="/register"
           localization={CLERK_LOCALIZATION}
         >
+          <PromptDraftProvider>
           <Suspense fallback={null}>
             <ChatsLoader>
               <AppShell
@@ -71,6 +73,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               </AppShell>
             </ChatsLoader>
           </Suspense>
+          </PromptDraftProvider>
           <Toaster />
         </ClerkProvider>
         </ThemeProvider>

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowUp, FileText, Mic, Plus, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { usePromptDraft } from "@/components/prompts/PromptDraftProvider";
 import { Input } from "@/components/ui/input";
 import {
   InputGroup,
@@ -31,7 +32,11 @@ interface ChatInputProps {
 }
 
 export default function ChatInput({ disabled, onSubmit }: ChatInputProps) {
-  const [text, setText] = useState("");
+  const { getDraft, clearDraft } = usePromptDraft();
+  // A prompt chosen on the prompts page fills the box.
+  const [text, setText] = useState(() =>
+    (getDraft() ?? "").slice(0, MAX_MESSAGE_LENGTH),
+  );
   const [files, setFiles] = useState<File[]>([]);
   const [dragging, setDragging] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -57,6 +62,13 @@ export default function ChatInput({ disabled, onSubmit }: ChatInputProps) {
   useEffect(() => {
     if (!disabled) textareaRef.current?.focus();
   }, [disabled]);
+
+  // The prompt filling the box (if any) is used up, and the cursor goes to its end.
+  useEffect(() => {
+    clearDraft();
+    const length = textareaRef.current?.value.length ?? 0;
+    textareaRef.current?.setSelectionRange(length, length);
+  }, [clearDraft]);
 
   const addFiles = (incoming: FileList | File[]) => {
     const accepted = Array.from(incoming).filter(isAcceptedFile);

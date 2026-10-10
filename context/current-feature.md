@@ -1,20 +1,29 @@
-# Current Feature
+# Current Feature: Prompts Library
 
-<!-- Feature name and short description -->
+A `/prompts` page with 12 starter prompts (defined in code) and the user's own saved prompts. Use fills the chat input of a new chat. Full spec: @context/features/prompts-library-spec.md
 
 ## Status
 
-<!-- Not Started | In Progress | Completed -->
-
-Completed
+In Progress
 
 ## Goals
 
-<!-- Goals and requirements -->
+- Add a `Prompt` model and migration, the five categories, and Zod schemas (title 1-60, description 0-120, content 1-10,000, max 100 per user)
+- Add the 12 starter prompts in `lib/starter-prompts.ts`, with a test that ids are unique and each passes validation
+- Add `actions/prompts.ts` (create, update, delete) with ownership checks, the 100 prompt limit and tests
+- Build the `/prompts` page: grid of cards, search, category chips, "Your prompts" and "Starter prompts" sections, preview dialog; guests see starters only
+- Add create, edit, duplicate ("Save a copy" for starters) and delete with confirmation; guests get the sign-in modal
+- Make Use fill the chat input of a new chat through a client-side draft context, without sending
+- Add a "Prompts" item to the sidebar
+- Update `README.md` (features list and project structure)
 
 ## Notes
 
-<!-- Any extra notes -->
+- Starter prompts live in code, not the database; Use fills the input and never sends; the `/` slash picker is out of scope
+- Use shadcn components for all UI (Card, Dialog, AlertDialog, Select, DropdownMenu, Badge, Textarea); no new colors
+- Use `prisma migrate dev` against the `development` Neon branch only, never `production`
+- No new environment variables or scripts; demo cleanup needs no change because prompts cascade-delete with the user
+- Build order and key files are in the spec, sections 11 and 12
 
 ## Completed Features
 
