@@ -1,26 +1,20 @@
 # Current Feature
 
-# Current Feature: Limiter and Markdown Hardening
-
-Fixes from the second code scan, covering the rate limiter, the chat Markdown renderer and demo cleanup.
+<!-- Feature name and short description -->
 
 ## Status
 
-In Progress
+<!-- Not Started | In Progress | Completed -->
+
+Completed
 
 ## Goals
 
-- Never load images from model replies: render a Markdown image as plain text
-- Make the demo limits strict when Redis is not configured in production, not only when it errors
-- Make the model spend limits (global budget, daily limit, title generation) fail closed when Redis errors
-- Make demo cleanup page past users that are not demo users, so it cannot stall
-- Log failed demo user deletions and report them with a 500 and a failed count
+<!-- Goals and requirements -->
 
 ## Notes
 
-- Findings 1, 2, 3, 6 and 7 of the second scan; the rest were left on purpose (shared "unknown" IP bucket, in-memory sweep, capacity race, body buffering, notebook id signal)
-- Chat limits fail closed on a Redis error only, so a deployment without Redis still gets live replies
-- No migration, new dependency or environment variable
+<!-- Any extra notes -->
 
 ## Completed Features
 
@@ -56,3 +50,4 @@ In Progress
 - **Prompts Library:** Adds a `/prompts` page with 12 starter prompts and the user's own saved prompts, where Use fills the chat input of a new chat; key files `app/prompts/page.tsx`, `components/prompts/`, `actions/prompts.ts`.
 - **Export Chat:** Adds Markdown download of a saved chat from the chat menus in the sidebar, notebook pages and a new three-dot menu on the chat page; key files `app/api/chats/[chatId]/export/route.ts`, `lib/chat-export.ts`, `components/chat/ChatView.tsx`.
 - **Export and Prompts Hardening:** Makes the prompt limit atomic, rate limits export and prompt changes, caps exports, and expires stale prompt drafts, from the code scan; key files `actions/prompts.ts`, `lib/action-limits.ts`, `lib/prompt-draft.ts`.
+- **Limiter and Markdown Hardening:** Stops chat replies loading images, makes the demo and model spend limits stricter when Redis is missing or down, and fixes demo cleanup paging; key files `lib/rate-limit.ts`, `components/chat/ChatMarkdown.tsx`, `app/api/demo/cleanup/route.ts`.
